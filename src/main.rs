@@ -6,7 +6,7 @@ use std::process;
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.get(1) == Some(&"capture".to_string()) {
-        if let Some(oid) = snapshots::create(Path::new(".")).unwrap() {
+        if let Some(oid) = snapshots::capture(Path::new(".")).unwrap() {
             println!("{}", oid);
         }
     } else {

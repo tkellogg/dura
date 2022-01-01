@@ -1,9 +1,10 @@
 use std::path::Path;
-use git2::{Repository, Error, IndexAddOption, Oid};
+use git2::{Repository, Error, IndexAddOption, Oid, Commit, BranchType};
 
-pub fn create(path: &Path) -> Result<Option<Oid>, Error> {
+pub fn capture(path: &Path) -> Result<Option<Oid>, Error> {
     let repo = Repository::open(path)?;
     let head = repo.head()?.peel_to_commit()?;
+    println!("HEAD: {}", head.id());
     let message = "test commit";
 
     // status check
@@ -18,15 +19,32 @@ pub fn create(path: &Path) -> Result<Option<Oid>, Error> {
     let tree_oid = index.write_tree()?;
     let tree = repo.find_tree(tree_oid)?;
 
+    let branch_name = format!("dura-{}", head.id());
+    let branch_commit = find_head(&repo, branch_name.as_str());
+
+    if let Err(_) = repo.find_branch(branch_name.as_str(), BranchType::Local) {
+        println!("Branch didn't exist, creating {}", branch_name.as_str());
+        repo.branch(branch_name.as_str(), &head, false)?;
+        println!("Created.");
+    }
+
     let oid = repo.commit(
-        None, // update_ref: we'll do this a different way
+        Some(format!("refs/heads/{}", branch_name.as_str()).as_str()),
         &head.author(), 
         &head.committer(),
         message,
         &tree,
-        &vec![ &head ],
+        &[ branch_commit.as_ref().unwrap_or(&head) ],
     )?;
 
     Ok(Some(oid))
+}
+
+fn find_head<'repo>(repo: &'repo Repository, branch_name: &str) -> Option<Commit<'repo>> {
+    if let Ok(branch) = repo.find_branch(branch_name, BranchType::Local) {
+        branch.get().peel_to_commit().ok()
+    } else {
+        None
+    }
 }
 
