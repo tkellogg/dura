@@ -1,10 +1,23 @@
+use std::fmt;
 use std::path::Path;
 use git2::{Repository, Error, IndexAddOption, Oid, Commit, BranchType, DiffOptions};
 
-pub fn capture(path: &Path) -> Result<Option<Oid>, Error> {
+#[derive(Debug)]
+pub struct CaptureStatus {
+    dura_branch: String,
+    commit_hash: Oid,
+    base_hash: Oid,
+}
+
+impl fmt::Display for CaptureStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "dura: {}, commit_hash: {}, base: {}", self.dura_branch, self.commit_hash, self.base_hash)
+    }
+}
+
+pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
     let repo = Repository::open(path)?;
     let head = repo.head()?.peel_to_commit()?;
-    println!("HEAD: {}", head.id());
     let message = "test commit";
 
     // status check
@@ -16,9 +29,7 @@ pub fn capture(path: &Path) -> Result<Option<Oid>, Error> {
     let branch_commit = find_head(&repo, branch_name.as_str());
 
     if let Err(_) = repo.find_branch(&branch_name, BranchType::Local) {
-        println!("Branch didn't exist, creating {}", branch_name.as_str());
         repo.branch(branch_name.as_str(), &head, false)?;
-        println!("Created.");
     }
 
     // tree
@@ -31,7 +42,6 @@ pub fn capture(path: &Path) -> Result<Option<Oid>, Error> {
         Some(DiffOptions::new().include_untracked(true))
     )?;
     if dirty_diff.deltas().len() == 0 {
-        println!("Empty diff");
         return Ok(None)
     }
 
@@ -47,8 +57,11 @@ pub fn capture(path: &Path) -> Result<Option<Oid>, Error> {
         &[ branch_commit.as_ref().unwrap_or(&head) ],
     )?;
 
-    println!("Committed");
-    Ok(Some(oid))
+    Ok(Some(CaptureStatus {
+        dura_branch: branch_name,
+        commit_hash: oid,
+        base_hash: head.id(),
+    }))
 }
 
 fn find_head<'repo>(repo: &'repo Repository, branch_name: &str) -> Option<Commit<'repo>> {
