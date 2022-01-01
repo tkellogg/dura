@@ -15,3 +15,9 @@ Then, in another console, make changes to files in the same repository. Whenever
 $ git log --all
 ```
 
+## Install
+
+1. Install rust (e.g. `brew install rust`)
+2. Clone this repository 
+3. Run `cargo install --path .`
+
