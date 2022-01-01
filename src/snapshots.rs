@@ -1,5 +1,5 @@
 use std::path::Path;
-use git2::{Repository, Error, IndexAddOption, Oid, Commit, BranchType};
+use git2::{Repository, Error, IndexAddOption, Oid, Commit, BranchType, DiffOptions};
 
 pub fn capture(path: &Path) -> Result<Option<Oid>, Error> {
     let repo = Repository::open(path)?;
@@ -12,21 +12,31 @@ pub fn capture(path: &Path) -> Result<Option<Oid>, Error> {
         return Ok(None);
     }
 
-    // tree
-    let mut index = repo.index()?;
-    index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
-
-    let tree_oid = index.write_tree()?;
-    let tree = repo.find_tree(tree_oid)?;
-
     let branch_name = format!("dura-{}", head.id());
     let branch_commit = find_head(&repo, branch_name.as_str());
 
-    if let Err(_) = repo.find_branch(branch_name.as_str(), BranchType::Local) {
+    if let Err(_) = repo.find_branch(&branch_name, BranchType::Local) {
         println!("Branch didn't exist, creating {}", branch_name.as_str());
         repo.branch(branch_name.as_str(), &head, false)?;
         println!("Created.");
     }
+
+    // tree
+    let mut index = repo.index()?;
+    index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
+
+    let dirty_diff = repo.diff_tree_to_index(
+        Some(&branch_commit.as_ref().unwrap_or(&head).tree()?), 
+        Some(&index), 
+        Some(DiffOptions::new().include_untracked(true))
+    )?;
+    if dirty_diff.deltas().len() == 0 {
+        println!("Empty diff");
+        return Ok(None)
+    }
+
+    let tree_oid = index.write_tree()?;
+    let tree = repo.find_tree(tree_oid)?;
 
     let oid = repo.commit(
         Some(format!("refs/heads/{}", branch_name.as_str()).as_str()),
@@ -37,6 +47,7 @@ pub fn capture(path: &Path) -> Result<Option<Oid>, Error> {
         &[ branch_commit.as_ref().unwrap_or(&head) ],
     )?;
 
+    println!("Committed");
     Ok(Some(oid))
 }
 
