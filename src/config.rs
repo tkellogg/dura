@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::fs::{File, create_dir_all};
+use std::fs::{File, create_dir_all, OpenOptions};
 use std::io;
 
 use serde::{Serialize, Deserialize};
@@ -56,16 +56,15 @@ impl Config {
 
     pub fn save(&self) {
         let path = Self::default_path();
-        let file = match path.as_path().exists() {
-            true => File::open(path.as_path()).unwrap(),
-            false => {
-                create_dir_all(path.as_path().parent().unwrap()).unwrap();
-                File::create(path.as_path()).unwrap()
-            },
-        };
+        let file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(path.as_path())
+            .unwrap();
 
         let writer = io::BufWriter::new(file);
         serde_json::to_writer(writer, self).unwrap();
+        println!("Wrote {}", path.to_str().unwrap());
     }
 
     pub fn set_watch(&mut self, path: String, cfg: WatchConfig) {

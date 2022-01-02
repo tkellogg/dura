@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::process;
 use std::io::stdout;
 use std::io::Write;
 
@@ -18,6 +19,10 @@ fn process_directory(path: &Path) {
 
 fn do_task() {
     let config = Config::load();
+    if config.pid != Some(process::id()) {
+        eprintln!("Shutting down because other poller took lock: {:?}", config.pid);
+        process::exit(1);
+    }
 
     for (key, _value) in config.repos {
         let path = Path::new(key.as_str());
@@ -26,6 +31,10 @@ fn do_task() {
 }
 
 pub async fn start() {
+    let mut config = Config::load();
+    config.pid = Some(process::id());
+    config.save();
+
     loop {
         time::sleep(time::Duration::from_secs(5)).await;
         do_task();
