@@ -18,6 +18,8 @@ async fn main() {
         poller::start().await;
     } else if args.get(1) == Some(&"watch".to_string()) {
         watch_dir(".");
+    } else if args.get(1) == Some(&"kill".to_string()) {
+        kill();
     } else {
         dbg!(args);
         eprintln!("Usage: duralumin capture");
@@ -32,3 +34,10 @@ fn watch_dir(dir: &str) {
     config.set_watch(path.as_path().to_str().unwrap().to_string(), WatchConfig::new());
     config.save();
 }
+
+fn kill() {
+    let mut config = Config::load();
+    config.pid = None;
+    config.save();
+}
+

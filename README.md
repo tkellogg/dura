@@ -12,7 +12,6 @@ $ duralumin serve
 The `serve` can happen in any directory, but you need to tell `duralumin` to watch directories that contain Git repos:
 
 ```
-$ cd my/repo
 $ duralumin watch
 # ... make some chanes, wait ...
 $ git log --all
