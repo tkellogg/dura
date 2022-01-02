@@ -21,3 +21,11 @@ $ git log --all
 2. Clone this repository 
 3. Run `cargo install --path .`
 
+
+# FAQ
+## Is this stable?
+lol no
+
+## How often does this check for changes?
+Every now and then, like 5 seconds or so.
+

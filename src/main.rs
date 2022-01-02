@@ -1,8 +1,10 @@
+mod config;
 mod snapshots;
 mod poller;
 
 use std::path::Path;
 use std::process;
+use crate::config::{Config, WatchConfig};
 
 #[tokio::main]
 async fn main() {
@@ -14,9 +16,19 @@ async fn main() {
     } else if args.get(1) == Some(&"serve".to_string()) {
         println!("pid: {}", std::process::id());
         poller::start().await;
+    } else if args.get(1) == Some(&"watch".to_string()) {
+        watch_dir(".");
     } else {
         dbg!(args);
         eprintln!("Usage: duralumin capture");
         process::exit(1);
     }
+}
+
+fn watch_dir(dir: &str) {
+    let path = Path::new(dir).canonicalize().unwrap();
+
+    let mut config = Config::load();
+    config.set_watch(path.as_path().to_str().unwrap().to_string(), WatchConfig::new());
+    config.save();
 }
