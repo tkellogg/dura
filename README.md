@@ -9,11 +9,17 @@ $ cd some-git-repo
 $ duralumin serve
 ```
 
-Then, in another console, make changes to files in the same repository. Whenever a non-ignored file is changed, you'll soon:
+The `serve` can happen in any directory, but you need to tell `duralumin` to watch directories that contain Git repos:
 
 ```
+$ cd my/repo
+$ duralumin watch
+# ... make some chanes, wait ...
 $ git log --all
 ```
+
+You should see a branch called something like `dura-49a103a09c509aa3c9ed90126a6fc10a686c8bf1` where the `49a10...` hash
+is HEAD, the most recent commit in the current branch.
 
 ## Install
 

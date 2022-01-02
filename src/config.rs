@@ -65,7 +65,7 @@ impl Config {
         };
 
         let writer = io::BufWriter::new(file);
-        serde_json::to_writer(writer, self).unwrap()
+        serde_json::to_writer(writer, self).unwrap();
     }
 
     pub fn set_watch(&mut self, path: String, cfg: WatchConfig) {
