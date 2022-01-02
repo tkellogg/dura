@@ -22,15 +22,17 @@ is HEAD, the most recent commit in the current branch.
 
 ## Install
 
-1. Install rust (e.g. `brew install rust`)
+1. Install rust (e.g. `brew install rustup`)
 2. Clone this repository 
 3. Run `cargo install --path .`
 
 
 # FAQ
 ## Is this stable?
-lol no
+It's still in prototype phase. Open issues pertaining to stability are marked with the 
+[stability](https://github.com/tkellogg/dura/issues?q=is%3Aopen+is%3Aissue+label%3Astability) tag. 
 
 ## How often does this check for changes?
-Every now and then, like 5 seconds or so.
+Every now and then, like 5 seconds or so. Internally there's a control loop that sleeps 5 seconds between loops, so it runs less than
+every 5 seconds (potentially a lot less, if there's a lot of work to do).
 
