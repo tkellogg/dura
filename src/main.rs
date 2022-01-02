@@ -22,7 +22,7 @@ async fn main() {
         kill();
     } else {
         dbg!(args);
-        eprintln!("Usage: duralumin capture");
+        eprintln!("Usage: dura capture");
         process::exit(1);
     }
 }

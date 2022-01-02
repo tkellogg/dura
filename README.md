@@ -1,18 +1,18 @@
 # Don't lose work!
-Duralumin watches your Git repositories and makes backgound commits so that you can always recover "lost" work.
+Dura watches your Git repositories and makes backgound commits so that you can always recover "lost" work.
 
 ## How to use
 Launch the daemon:
 
 ```
 $ cd some-git-repo
-$ duralumin serve
+$ dura serve
 ```
 
-The `serve` can happen in any directory, but you need to tell `duralumin` to watch directories that contain Git repos:
+The `serve` can happen in any directory, but you need to tell `dura` to watch directories that contain Git repos:
 
 ```
-$ duralumin watch
+$ dura watch
 # ... make some chanes, wait ...
 $ git log --all
 ```

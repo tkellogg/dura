@@ -35,7 +35,7 @@ impl Config {
     fn default_path() -> PathBuf {
         let mut home = std::env::home_dir().unwrap();
         home.push(".config");
-        home.push("duralumin");
+        home.push("dura");
         home.push("config.json");
         home
     }
