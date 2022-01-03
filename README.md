@@ -46,8 +46,8 @@ It's still in prototype phase. Open issues pertaining to stability are marked wi
 [stability](https://github.com/tkellogg/dura/issues?q=is%3Aopen+is%3Aissue+label%3Astability) tag. 
 
 ## How often does this check for changes?
-Every now and then, like 5 seconds or so. Internally there's a control loop that sleeps 5 seconds between loops, so it runs less than
-every 5 seconds (potentially a lot less, if there's a lot of work to do).
+Every now and then, like 5 seconds or so. Internally there's a control loop that sleeps 5 seconds between loops, so it runs less frequently than
+every 5 seconds (potentially a lot less frequently, if there's a lot of work to do).
 
 ## Does this work on my OS?
 * Mac: yes
