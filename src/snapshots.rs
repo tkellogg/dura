@@ -18,7 +18,7 @@ impl fmt::Display for CaptureStatus {
 pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
     let repo = Repository::open(path)?;
     let head = repo.head()?.peel_to_commit()?;
-    let message = "test commit";
+    let message = "dura auto-backup";
 
     // status check
     if repo.statuses(None)?.is_empty() {
