@@ -1,24 +1,35 @@
-# Don't lose work!
-Dura watches your Git repositories and makes backgound commits so that you can always recover "lost" work.
+Dura is a background process that watches your Git repositories and makes hidden commits. If you ever get into an "oh snap!" situation
+where you think you just lost days of work, checkout a `dura` branch and recover.
+
+Without `dura`, you use Ctrl-Z in your editor to get back to a good state. Thats's so 2021. Computers crash, and Crl-Z only works on files 
+independently. Dura snapshots changes across the entire repository as-you-go, so you can revert to "4 hours ago" instead of "hit Ctrl-Z 
+like 40 times or whatever". Finally some sanity.
 
 ## How to use
 Launch the daemon:
 
 ```
-$ cd some-git-repo
-$ dura serve
+$ dura serve &
 ```
 
-The `serve` can happen in any directory, but you need to tell `dura` to watch directories that contain Git repos:
+The `serve` can happen in any directory. The `&` is bash syntax to "daemonize" the process, meaning that you can start `dura` and then 
+keep using the same terminal window while `dura` keeps running. You could also run `dura serve` in a window that you keep open.
+
+Let `dura` know which repositories to watch: 
 
 ```
+$ cd some/git/repo
 $ dura watch
-# ... make some chanes, wait ...
+```
+
+Make some changes. No need to commit or even stage them. Use any Git tool to see the `dura` branches:
+
+```
 $ git log --all
 ```
 
-You should see a branch called something like `dura-49a103a09c509aa3c9ed90126a6fc10a686c8bf1` where the `49a10...` hash
-is HEAD, the most recent commit in the current branch.
+`dura` produces a branch for every real commit you make and makes commits to that branch without impacting your working copy. You
+keep using Git exactly like you did before.
 
 ## Install
 
@@ -35,4 +46,9 @@ It's still in prototype phase. Open issues pertaining to stability are marked wi
 ## How often does this check for changes?
 Every now and then, like 5 seconds or so. Internally there's a control loop that sleeps 5 seconds between loops, so it runs less than
 every 5 seconds (potentially a lot less, if there's a lot of work to do).
+
+## Does this work on my OS?
+* Mac: yes
+* Linux: probably
+* Windows: possibly
 
