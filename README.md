@@ -40,7 +40,7 @@ The `dura` branch that's tracking your current uncommitted looks like `dura-f4a8
 branch name via:
 
 ```bash
-echo "dura-$(git log | head -n1 | awk '{ print $2 }')"
+echo "dura-$(git rev-parse HEAD)"
 ```
 
 Use `git log` or [`tig`](http://jonas.github.io/tig/) to figure out which commit you want to rollback to. Copy the hash and then run something like
