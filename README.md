@@ -22,6 +22,8 @@ $ cd some/git/repo
 $ dura watch
 ```
 
+Right now you have to `cd` into each repo that you want to watch, one-at-a-time. If you have thoughts on how to do this better, share them [here](https://github.com/tkellogg/dura/issues/3).
+
 Make some changes. No need to commit or even stage them. Use any Git tool to see the `dura` branches:
 
 ```
