@@ -1,20 +1,18 @@
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::fs::{File, create_dir_all, OpenOptions};
+use std::fs::{create_dir_all, File, OpenOptions};
 use std::io;
+use std::path::{Path, PathBuf};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct WatchConfig {
-}
+pub struct WatchConfig {}
 
 impl WatchConfig {
     pub fn new() -> Self {
-        Self {
-        }
+        Self {}
     }
 }
 
@@ -56,6 +54,8 @@ impl Config {
 
     pub fn save(&self) {
         let path = Self::default_path();
+        path.clone().parent().map(create_dir_all);
+
         let file = OpenOptions::new()
             .write(true)
             .create(true)
@@ -71,4 +71,3 @@ impl Config {
         self.repos.insert(path, cfg);
     }
 }
-
