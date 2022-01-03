@@ -1,5 +1,6 @@
-Dura is a background process that watches your Git repositories and makes hidden commits. If you ever get into an "oh snap!" situation
-where you think you just lost days of work, checkout a `dura` branch and recover.
+Dura is a background process that watches your Git repositories and commits your uncommitted changes without impacting HEAD, current branch
+or the Git index (staged files). If you ever get into an "oh snap!" situation where you think you just lost days of work, checkout a `dura` 
+branch and recover. 
 
 Without `dura`, you use Ctrl-Z in your editor to get back to a good state. Thats's so 2021. Computers crash, and Crl-Z only works on files 
 independently. Dura snapshots changes across the entire repository as-you-go, so you can revert to "4 hours ago" instead of "hit Ctrl-Z 
@@ -33,7 +34,30 @@ $ git log --all
 `dura` produces a branch for every real commit you make and makes commits to that branch without impacting your working copy. You
 keep using Git exactly like you did before.
 
-## Install
+# How to recover
+
+The `dura` branch that's tracking your current uncommitted looks like `dura-f4a88e5ea0f1f7492845f7021ae82db70f14c725`. In bash, you can get the
+branch name via:
+
+```
+echo "dura-$(git log | head -n1 | awk '{ print $2 }')"
+```
+
+Use `git log` or [`tig`](http://jonas.github.io/tig/) to figure out which commit you want to rollback to. Copy the hash and then run something like
+
+```
+# Or, if you don't trust dura yet, `git stash`
+$ git reset HEAD --hard
+# get the changes into your working directory
+$ git checkout $THE_HASH
+# last few commands reset HEAD back to master but with changes uncommitted
+$ git checkout -b temp-branch
+$ git reset master
+$ git checkout master
+$ git branch -D temp-branch
+```
+
+# Install
 
 1. Install rust (e.g. `brew install rustup`)
 2. Clone this repository 
