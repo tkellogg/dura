@@ -57,6 +57,8 @@ $ git checkout master
 $ git branch -D temp-branch
 ```
 
+If you're interested in improving this experience, [collaborate here](https://github.com/tkellogg/dura/issues/4).
+
 # Install
 
 1. Install rust (e.g. `brew install rustup`)
