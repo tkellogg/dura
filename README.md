@@ -4,19 +4,19 @@ Dura is a background process that watches your Git repositories and commits your
 HEAD, the current branch, or the Git index (staged files). If you ever get into an "oh snap!" situation where you think
 you just lost days of work, checkout a `dura` branch and recover.
 
-Without `dura`, you use Ctrl-Z in your editor to get back to a good state. That's so 2021. Computers crash and Crl-Z
+Without `dura`, you use Ctrl-Z in your editor to get back to a good state. That's so 2021. Computers crash and Ctrl-Z
 only works on files independently. Dura snapshots changes across the entire repository as-you-go, so you can revert to
 "4 hours ago" instead of "hit Ctrl-Z like 40 times or whatever". Finally, some sanity.
 
 ## How to use
 
-Launch the daemon:
+Run it in the background:
 
 ```bash
 $ dura serve &
 ```
 
-The `serve` can happen in any directory. The `&` is bash syntax to "daemonize" the process, meaning that you can start
+The `serve` can happen in any directory. The `&` is Unix shell syntax to run the process in the background, meaning that you can start
 `dura` and then keep using the same terminal window while `dura` keeps running. You could also run `dura serve` in a
 window that you keep open.
 
@@ -41,14 +41,14 @@ copy. You keep using Git exactly as you did before.
 
 ## How to recover
 
-The `dura` branch that's tracking your current uncommitted looks like `dura-f4a88e5ea0f1f7492845f7021ae82db70f14c725`.
-In bash, you can get the branch name via:
+The `dura` branch that's tracking your current uncommitted changes looks like `dura-f4a88e5ea0f1f7492845f7021ae82db70f14c725`.
+In $SHELL, you can get the branch name via:
 
 ```bash
 $ echo "dura-$(git rev-parse HEAD)"
 ```
 
-Use `git log` or [`tig`](http://jonas.github.io/tig/) to figure out which commit you want to rollback to. Copy the hash
+Use `git log` or [`tig`](https://jonas.github.io/tig/) to figure out which commit you want to rollback to. Copy the hash
 and then run something like
 
 ```bash
@@ -67,7 +67,7 @@ If you're interested in improving this experience, [collaborate here](https://gi
 
 ## Install
 
-1. Install rust (e.g., `brew install rustup`)
+1. Install Rust (e.g., `brew install rustup`)
 1. Clone this repository
 1. Run `cargo install --path .`
 
@@ -80,7 +80,7 @@ It's still in the prototype phase. Open issues pertaining to stability are marke
 
 ### How often does this check for changes?
 
-Every now and then, like 5 seconds or so. Internally there's a control loop that sleeps 5 seconds between loops, so it
+Every now and then, like 5 seconds or so. Internally there's a control loop that sleeps 5 seconds between iterations, so it
 runs less frequently than every 5 seconds (potentially a lot less frequently, if there's a lot of work to do).
 
 ### Does this work on my OS?
