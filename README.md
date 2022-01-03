@@ -9,7 +9,7 @@ like 40 times or whatever". Finally some sanity.
 ## How to use
 Launch the daemon:
 
-```
+```bash
 $ dura serve &
 ```
 
@@ -18,7 +18,7 @@ keep using the same terminal window while `dura` keeps running. You could also r
 
 Let `dura` know which repositories to watch: 
 
-```
+```bash
 $ cd some/git/repo
 $ dura watch
 ```
@@ -27,7 +27,7 @@ Right now you have to `cd` into each repo that you want to watch, one-at-a-time.
 
 Make some changes. No need to commit or even stage them. Use any Git tool to see the `dura` branches:
 
-```
+```bash
 $ git log --all
 ```
 
@@ -39,13 +39,13 @@ keep using Git exactly like you did before.
 The `dura` branch that's tracking your current uncommitted looks like `dura-f4a88e5ea0f1f7492845f7021ae82db70f14c725`. In bash, you can get the
 branch name via:
 
-```
+```bash
 echo "dura-$(git log | head -n1 | awk '{ print $2 }')"
 ```
 
 Use `git log` or [`tig`](http://jonas.github.io/tig/) to figure out which commit you want to rollback to. Copy the hash and then run something like
 
-```
+```bash
 # Or, if you don't trust dura yet, `git stash`
 $ git reset HEAD --hard
 # get the changes into your working directory
