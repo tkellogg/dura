@@ -36,10 +36,7 @@ impl Config {
 
     /// Load Config from default path
     pub fn load() -> Self {
-        match Self::load_file(Self::default_path().as_path()) {
-            Ok(obj) => obj,
-            Err(_) => Self::empty(),
-        }
+        Self::load_file(Self::default_path().as_path()).unwrap_or(Self::empty())
     }
 
     fn load_file(path: &Path) -> Result<Self> {
