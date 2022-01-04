@@ -39,6 +39,13 @@ fn watch_dir(path: &std::path::PathBuf) {
     config.save();
 }
 
+
+/// kills running dura poller
+///
+/// poller's check to make sure that their pid is the same as the pid
+/// found in config, and if they are not the same they exit. This
+/// function does not actually kill a poller but instead indicates
+/// that any living poller should exit during their next check.
 fn kill() {
     let mut config = Config::load();
     config.pid = None;
