@@ -1,9 +1,9 @@
 mod config;
+mod log;
 mod poller;
 mod snapshots;
 
 use crate::config::{Config, WatchConfig};
-use std::path::Path;
 use std::process;
 
 #[tokio::main]

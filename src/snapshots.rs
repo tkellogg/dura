@@ -1,12 +1,13 @@
 use std::fmt;
 use std::path::Path;
-use git2::{Repository, Error, IndexAddOption, Oid, Commit, BranchType, DiffOptions};
+use git2::{Repository, Error, IndexAddOption, Commit, BranchType, DiffOptions};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CaptureStatus {
     dura_branch: String,
-    commit_hash: Oid,
-    base_hash: Oid,
+    commit_hash: String,
+    base_hash: String,
 }
 
 impl fmt::Display for CaptureStatus {
@@ -59,8 +60,8 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
 
     Ok(Some(CaptureStatus {
         dura_branch: branch_name,
-        commit_hash: oid,
-        base_hash: head.id(),
+        commit_hash: oid.to_string(),
+        base_hash: head.id().to_string(),
     }))
 }
 
