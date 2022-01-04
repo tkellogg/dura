@@ -67,6 +67,13 @@ If you're interested in improving this experience, [collaborate here](https://gi
 
 ## Install
 
+### Arch Linux
+```bash
+$ paru -S dura-git
+```
+
+### By Source
+
 1. Install Rust (e.g., `brew install rustup`)
 1. Clone this repository
 1. Run `cargo install --path .`
