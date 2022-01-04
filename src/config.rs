@@ -31,7 +31,9 @@ impl Config {
     }
 
     pub fn default_path() -> PathBuf {
-        std::env::home_dir().unwrap().join(".config/dura/config.json")
+        home::home_dir()
+        .expect("Could not find your home directory!")
+        .join(".config/dura/config.json")
     }
 
     /// Load Config from default path
