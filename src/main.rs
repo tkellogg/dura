@@ -39,7 +39,6 @@ fn watch_dir(path: &std::path::PathBuf) {
     config.save();
 }
 
-
 /// kills running dura poller
 ///
 /// poller's check to make sure that their pid is the same as the pid
