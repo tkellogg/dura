@@ -13,8 +13,8 @@ fn process_directory(path: &Path) {
         println!("{}", oid);
     } else {
         print!(".");
+        stdout().flush().unwrap();
     }
-    stdout().flush().unwrap();
 }
 
 fn do_task() {
