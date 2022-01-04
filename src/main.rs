@@ -33,7 +33,7 @@ async fn main() {
     }
 }
 
-fn watch_dir(path: &std::path::PathBuf) {
+fn watch_dir(path: &std::path::Path) {
     let mut config = Config::load();
     config.set_watch(path.to_str().unwrap().to_string(), WatchConfig::new());
     config.save();
