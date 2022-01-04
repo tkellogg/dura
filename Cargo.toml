@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 git2 = "0.13"
+home = "0.5.3"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
