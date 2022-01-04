@@ -50,7 +50,7 @@ impl Config {
 
     pub fn save(&self) {
         let path = Self::default_path();
-        path.clone().parent().map(create_dir_all);
+        path.parent().map(create_dir_all);
 
         let file = OpenOptions::new()
             .write(true)
