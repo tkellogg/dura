@@ -4,7 +4,7 @@ Dura is a background process that watches your Git repositories and commits your
 HEAD, the current branch, or the Git index (staged files). If you ever get into an "oh snap!" situation where you think
 you just lost days of work, checkout a `dura` branch and recover.
 
-Without `dura`, you use Ctrl-Z in your editor to get back to a good state. That's so 2021. Computers crash and Crl-Z
+Without `dura`, you use Ctrl-Z in your editor to get back to a good state. That's so 2021. Computers crash and Ctrl-Z
 only works on files independently. Dura snapshots changes across the entire repository as-you-go, so you can revert to
 "4 hours ago" instead of "hit Ctrl-Z like 40 times or whatever". Finally, some sanity.
 
