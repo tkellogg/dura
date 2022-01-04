@@ -30,12 +30,8 @@ impl Config {
         }
     }
 
-    fn default_path() -> PathBuf {
-        let mut home = std::env::home_dir().unwrap();
-        home.push(".config");
-        home.push("dura");
-        home.push("config.json");
-        home
+    pub fn default_path() -> PathBuf {
+        std::env::home_dir().unwrap().join(".config/dura/config.json")
     }
 
     /// Load Config from default path

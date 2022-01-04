@@ -39,6 +39,16 @@ $ git log --all
 `dura` produces a branch for every real commit you make and makes commits to that branch without impacting your working
 copy. You keep using Git exactly as you did before.
 
+
+Let `dura` know that it should stop running in the background with the `kill` command.
+
+```bash
+$ dura kill
+```
+
+The `kill` can happen in any directory. It indicates to the `serve`
+process that it should exit if there is a `serve` process running.
+
 ## How to recover
 
 The `dura` branch that's tracking your current uncommitted changes looks like `dura-f4a88e5ea0f1f7492845f7021ae82db70f14c725`.
@@ -66,6 +76,13 @@ $ git branch -D temp-branch
 If you're interested in improving this experience, [collaborate here](https://github.com/tkellogg/dura/issues/4).
 
 ## Install
+
+### Arch Linux
+```bash
+$ paru -S dura-git
+```
+
+### By Source
 
 1. Install Rust (e.g., `brew install rustup`)
 1. Clone this repository

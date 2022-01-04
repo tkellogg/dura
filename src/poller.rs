@@ -1,20 +1,27 @@
 use std::path::Path;
 use std::process;
-use std::io::stdout;
-use std::io::Write;
+use std::time::Instant;
 
 use tokio::time;
 
 use crate::snapshots;
 use crate::config::Config;
+use crate::log::{Log, Logger, Operation};
 
-fn process_directory(path: &Path) {
-    if let Some(oid) = snapshots::capture(path).unwrap() {
-        println!("{}", oid);
-    } else {
-        print!(".");
+fn process_directory(path: &Path) -> Log {
+    let mut op: Option<snapshots::CaptureStatus> = None;
+    let mut error: Option<String> = None;
+    let start_time = Instant::now();
+
+    match snapshots::capture(path) {
+        Ok(Some(status)) => { op = Some(status) },
+        Ok(None) => (),
+        Err(err) => { error = Some(format!("{}", err)); },
     }
-    stdout().flush().unwrap();
+
+    let latency = (Instant::now() - start_time).as_secs_f32();
+    let repo = path.to_str().unwrap_or("<invalid path>").to_string();
+    Log::new(Operation::Snapshot{ repo, op, error, latency })
 }
 
 fn do_task() {
@@ -24,9 +31,11 @@ fn do_task() {
         process::exit(1);
     }
 
+    let mut logger = Logger::new();
     for (key, _value) in config.repos {
         let path = Path::new(key.as_str());
-        process_directory(&path);
+        let log_op = process_directory(&path);
+        logger.write(log_op);
     }
 }
 
