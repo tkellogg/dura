@@ -87,13 +87,13 @@ $ paru -S dura-git
 ### By Source
 
 1. Install Rust (e.g., `brew install rustup && brew install rust`)
-2. Clone this repository (e.g., `git clone git@github.com:tkellogg/dura.git`)
+2. Clone this repository (e.g., `git clone https://github.com/tkellogg/dura.git`)
 3. Navigate to repository base directory (`cd dura`)
 4. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
 
 ### Windows
 1. Download [rustup-init](https://www.rust-lang.org/tools/install)
-2. Clone this repository (e.g., `git clone git@github.com:tkellogg/dura.git`)
+2. Clone this repository (e.g., `git clone https://github.com/tkellogg/dura.git`)
 3. Navigate to repository base directory (`cd dura`)
 4. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
 
