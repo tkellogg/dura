@@ -16,6 +16,12 @@ impl WatchConfig {
     }
 }
 
+impl Default for WatchConfig {
+    fn default() -> Self {
+        WatchConfig::new()
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub pid: Option<u32>,
@@ -38,7 +44,7 @@ impl Config {
 
     /// Load Config from default path
     pub fn load() -> Self {
-        Self::load_file(Self::default_path().as_path()).unwrap_or(Self::empty())
+        Self::load_file(Self::default_path().as_path()).unwrap_or_else(|_| Self::empty())
     }
 
     fn load_file(path: &Path) -> Result<Self> {

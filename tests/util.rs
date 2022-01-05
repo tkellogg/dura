@@ -27,6 +27,10 @@ impl GitRepo {
             .output();
 
         if let Ok(output) = child_proc {
+            if !output.status.success() {
+                // This cleans up test development by causing us to fail earlier
+                return None
+            }
             let text = String::from_utf8(output.stdout).unwrap();
             if text.len() > 0 {
                 println!("{}", text);
@@ -66,15 +70,6 @@ impl GitRepo {
         println!("$ echo '{}' > {}", content, path);
         let path_obj = self.dir.path().join(path);
         fs::write(path_obj, content).unwrap();
-    }
-
-    pub fn ls(&self, path: &str) {
-        println!("$ ls -latrh {}", path);
-        let _ = Command::new("ls")
-            .args(&["-latrh", path])
-            .spawn()
-            .unwrap()
-            .wait();
     }
 }
 
