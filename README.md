@@ -85,9 +85,15 @@ $ paru -S dura-git
 ### By Source
 
 1. Install Rust (e.g., `brew install rustup && brew install rust`)
-1. Clone this repository (e.g., `git clone git@github.com:tkellogg/dura.git`)
-1. Navigate to repository base directory (`cd dura`)
-1. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
+2. Clone this repository (e.g., `git clone git@github.com:tkellogg/dura.git`)
+3. Navigate to repository base directory (`cd dura`)
+4. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
+
+### Windows
+1. Download [rustup-init](https://www.rust-lang.org/tools/install)
+2. Clone this repository (e.g., `git clone git@github.com:tkellogg/dura.git`)
+3. Navigate to repository base directory (`cd dura`)
+4. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
 
 ## FAQ
 
@@ -105,7 +111,7 @@ runs less frequently than every 5 seconds (potentially a lot less frequently, if
 
 - Mac: yes
 - Linux: probably
-- Windows: possibly
+- Windows: yes
 
 ### Can I add sub commands and aliases?
 
