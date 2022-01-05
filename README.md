@@ -106,3 +106,9 @@ runs less frequently than every 5 seconds (potentially a lot less frequently, if
 - Mac: yes
 - Linux: probably
 - Windows: possibly
+
+### Can I add sub commands and aliases?
+
+Yes, any executable on the path named like `dura-{cmd}` will be executed
+when `dura {cmd}` is called. For example, `dura foo` will try to find an 
+executable named dura-foo on the `$PATH`.
