@@ -1,10 +1,8 @@
-mod config;
-mod log;
-mod poller;
-mod snapshots;
-
-use crate::config::{Config, WatchConfig};
 use std::process;
+
+use dura::config::{Config, WatchConfig};
+use dura::snapshots;
+use dura::poller;
 
 #[tokio::main]
 async fn main() {
