@@ -4,7 +4,7 @@ if pgrep -f $script >/dev/null 2>/dev/null
 end
 
 function tempfile
-    if which mktemp >/dev/null 2>/dev/null
+    if command -v mktemp >/dev/null 2>/dev/null
         command mktemp
     else
         command tempfile
