@@ -1,10 +1,10 @@
 set script (realpath (status --current-filename))
-if pgrep -fq $script
+if pgrep -f $script >/dev/null 2>/dev/null
     exit 0
 end
 
 function tempfile
-    if command_exists mktemp
+    if which mktemp >/dev/null 2>/dev/null
         command mktemp
     else
         command tempfile
