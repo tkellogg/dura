@@ -65,10 +65,21 @@ impl Config {
 
         let writer = io::BufWriter::new(file);
         serde_json::to_writer(writer, self).unwrap();
-        println!("Wrote {}", path.to_str().unwrap());
     }
 
     pub fn set_watch(&mut self, path: String, cfg: WatchConfig) {
-        self.repos.insert(path, cfg);
+        if self.repos.contains_key(&path) {
+            println!("{} is already being watched", path)
+        } else {
+            self.repos.insert(path.clone(), cfg);
+            println!("Started watching {}", path)
+        }
+    }
+
+    pub fn set_unwatch(&mut self, path: String) {
+        match self.repos.remove(&path) {
+            Some(_) => println!("Stopped watching {}", path),
+            None => println!("{} is not being watched", path),
+        }
     }
 }
