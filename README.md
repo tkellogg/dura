@@ -27,8 +27,10 @@ $ cd some/git/repo
 $ dura watch
 ```
 
-Right now, you have to `cd` into each repo that you want to watch, one at a time. If you have thoughts on how to do this
-better, share them [here](https://github.com/tkellogg/dura/issues/3).
+Right now, you have to `cd` into each repo that you want to watch, one at a time.
+
+If you have thoughts on how to do this better, share them [here](https://github.com/tkellogg/dura/issues/3). Until that's sorted, you can
+run something like `find ~ -type d -name .git -prune | xargs -I= sh -c "cd =/..; dura watch"` to get started on your existing repos.
 
 Make some changes. No need to commit or even stage them. Use any Git tool to see the `dura` branches:
 
@@ -84,9 +86,16 @@ $ paru -S dura-git
 
 ### By Source
 
-1. Install Rust (e.g., `brew install rustup`)
-1. Clone this repository
-1. Run `cargo install --path .`
+1. Install Rust (e.g., `brew install rustup && brew install rust`)
+2. Clone this repository (e.g., `git clone https://github.com/tkellogg/dura.git`)
+3. Navigate to repository base directory (`cd dura`)
+4. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
+
+### Windows
+1. Download [rustup-init](https://www.rust-lang.org/tools/install)
+2. Clone this repository (e.g., `git clone https://github.com/tkellogg/dura.git`)
+3. Navigate to repository base directory (`cd dura`)
+4. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
 
 ## FAQ
 
@@ -104,4 +113,10 @@ runs less frequently than every 5 seconds (potentially a lot less frequently, if
 
 - Mac: yes
 - Linux: probably
-- Windows: possibly
+- Windows: yes
+
+### Can I add sub commands and aliases?
+
+Yes, any executable on the path named like `dura-{cmd}` will be executed
+when `dura {cmd}` is called. For example, `dura foo` will try to find an 
+executable named dura-foo on the `$PATH`.

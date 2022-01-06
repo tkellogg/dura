@@ -3,11 +3,11 @@ use std::path::Path;
 use git2::{Repository, Error, IndexAddOption, Commit, BranchType, DiffOptions};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct CaptureStatus {
-    dura_branch: String,
-    commit_hash: String,
-    base_hash: String,
+    pub dura_branch: String,
+    pub commit_hash: String,
+    pub base_hash: String,
 }
 
 impl fmt::Display for CaptureStatus {
@@ -29,7 +29,7 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
     let branch_name = format!("dura-{}", head.id());
     let branch_commit = find_head(&repo, branch_name.as_str());
 
-    if let Err(_) = repo.find_branch(&branch_name, BranchType::Local) {
+    if repo.find_branch(&branch_name, BranchType::Local).is_err() {
         repo.branch(branch_name.as_str(), &head, false)?;
     }
 

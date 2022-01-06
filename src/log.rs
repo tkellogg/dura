@@ -16,10 +16,7 @@ pub enum Operation {
 
 impl Operation {
     fn should_log(&self) -> bool {
-        match self {
-            Operation::Snapshot { repo: _, op: None, error: None, latency: _ } => false,
-            _ => true
-        }
+        !matches!(self, Operation::Snapshot { repo: _, op: None, error: None, latency: _ })
     }
 }
 
@@ -35,7 +32,7 @@ impl Log {
     pub fn new(op: Operation) -> Self {
         Self {
             time: Utc::now().to_rfc3339(),
-            op: op,
+            op,
         }
     }
 }
@@ -58,8 +55,8 @@ impl Logger {
         let _ = self.ensure_open();
         if let Some(ref file) = self.file {
             let writer = io::LineWriter::new(file);
-            if let Err(_) = serde_json::to_writer(writer, &log) {
-                eprintln!("Unable to write log");
+            if let Err(error) = serde_json::to_writer(writer, &log) {
+                eprintln!("Unable to write log: {:?}", error);
             }
         }
     }
@@ -86,6 +83,12 @@ impl Logger {
                 true
             },
         }
+    }
+}
+
+impl Default for Logger {
+    fn default() -> Self {
+        Logger::new()
     }
 }
 

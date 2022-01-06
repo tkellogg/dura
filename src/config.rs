@@ -16,6 +16,12 @@ impl WatchConfig {
     }
 }
 
+impl Default for WatchConfig {
+    fn default() -> Self {
+        WatchConfig::new()
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub pid: Option<u32>,
@@ -38,10 +44,7 @@ impl Config {
 
     /// Load Config from default path
     pub fn load() -> Self {
-        match Self::load_file(Self::default_path().as_path()) {
-            Ok(obj) => obj,
-            Err(_) => Self::empty(),
-        }
+        Self::load_file(Self::default_path().as_path()).unwrap_or_else(|_| Self::empty())
     }
 
     fn load_file(path: &Path) -> Result<Self> {
@@ -52,7 +55,7 @@ impl Config {
 
     pub fn save(&self) {
         let path = Self::default_path();
-        path.clone().parent().map(create_dir_all);
+        path.parent().map(create_dir_all);
 
         let file = OpenOptions::new()
             .write(true)

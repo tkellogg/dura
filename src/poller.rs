@@ -34,7 +34,7 @@ fn do_task() {
     let mut logger = Logger::new();
     for (key, _value) in config.repos {
         let path = Path::new(key.as_str());
-        let log_op = process_directory(&path);
+        let log_op = process_directory(path);
         logger.write(log_op);
     }
 }
