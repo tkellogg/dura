@@ -1,1 +1,9 @@
+# Compiled files and executables
 /target
+debug/
+
+# backup files from rustfmt
+**/*.rs.bk
+
+# debugging information from rustc on MSVC Windows 
+*.pdb
