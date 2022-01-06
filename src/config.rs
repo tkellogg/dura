@@ -75,4 +75,11 @@ impl Config {
             println!("Started watching {}", path)
         }
     }
+
+    pub fn set_unwatch(&mut self, path: String) {
+        match self.repos.remove(&path) {
+            Some(_) => println!("Stopped watching {}", path),
+            None => println!("{} is not being watched", path),
+        }
+    }
 }

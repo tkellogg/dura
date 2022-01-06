@@ -20,6 +20,9 @@ async fn main() {
         Some("watch") => {
             watch_dir(&dir);
         }
+        Some("unwatch") => {
+            unwatch_dir(&dir);
+        }
         Some("kill") => {
             kill();
         }
@@ -54,6 +57,12 @@ capture
 fn watch_dir(path: &std::path::Path) {
     let mut config = Config::load();
     config.set_watch(path.to_str().unwrap().to_string(), WatchConfig::new());
+    config.save();
+}
+
+fn unwatch_dir(path: &std::path::Path) {
+    let mut config = Config::load();
+    config.set_unwatch(path.to_str().unwrap().to_string());
     config.save();
 }
 
