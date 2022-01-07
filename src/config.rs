@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::fs::{create_dir_all, File, OpenOptions};
-use std::io;
+use std::{io, env};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct WatchConfig {}
 
 impl WatchConfig {
@@ -22,14 +22,14 @@ impl Default for WatchConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Config {
     pub pid: Option<u32>,
     pub repos: HashMap<String, WatchConfig>,
 }
 
 impl Config {
-    fn empty() -> Self {
+    pub fn empty() -> Self {
         Self {
             pid: None,
             repos: HashMap::new(),
@@ -37,9 +37,24 @@ impl Config {
     }
 
     pub fn default_path() -> PathBuf {
+        Self::get_dura_home().join("config.json")
+    }
+
+    /// Location of all config & database files. By default this is ~/.config/dura but can be
+    /// overridden by setting DURA_HOME environment variable.
+    fn get_dura_home() -> PathBuf {
+        // The environment variable lets us run tests independently, but I'm sure someone will come
+        // up with another reason to use it.
+        if let Ok(env_var) = env::var("DURA_HOME") {
+            if !env_var.is_empty() {
+                return env_var.into()
+            }
+        }
+
         home::home_dir()
-        .expect("Could not find your home directory!")
-        .join(".config/dura/config.json")
+        .expect("Could not find your home directory. The default is ~/.config/dura but it can also \
+                be controlled by setting the DURA_HOME environment variable.")
+        .join(".config/dura")
     }
 
     /// Load Config from default path
@@ -47,20 +62,26 @@ impl Config {
         Self::load_file(Self::default_path().as_path()).unwrap_or_else(|_| Self::empty())
     }
 
-    fn load_file(path: &Path) -> Result<Self> {
+    pub fn load_file(path: &Path) -> Result<Self> {
         let reader = io::BufReader::new(File::open(path)?);
         let res = serde_json::from_reader(reader)?;
         Ok(res)
     }
 
+    /// Save config to disk in ~/.config/dura/config.json
     pub fn save(&self) {
-        let path = Self::default_path();
+        self.save_to_path(Self::default_path().as_path())
+    }
+
+    /// Used by tests to save to a temp dir
+    pub fn save_to_path(&self, path: &Path) {
         path.parent().map(create_dir_all);
 
         let file = OpenOptions::new()
             .write(true)
             .create(true)
-            .open(path.as_path())
+            .truncate(true)
+            .open(path)
             .unwrap();
 
         let writer = io::BufWriter::new(file);
