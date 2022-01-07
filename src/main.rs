@@ -1,8 +1,12 @@
 use std::process;
 
 use dura::config::{Config, WatchConfig};
-use dura::snapshots;
+use dura::logger::NestedJsonLayer;
 use dura::poller;
+use dura::snapshots;
+use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{EnvFilter, Registry};
 
 #[tokio::main]
 async fn main() {
@@ -14,15 +18,19 @@ async fn main() {
             }
         }
         Some("serve") => {
-            println!("pid: {}", std::process::id());
+            let env_filter =
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+            Registry::default()
+                .with(env_filter)
+                .with(NestedJsonLayer::new(std::io::stdout))
+                .init();
+            tracing::info!(pid = std::process::id());
             poller::start().await;
         }
         Some("watch") => {
             watch_dir(&dir);
         }
-        Some("unwatch") => {
-            unwatch_dir(&dir)
-        }
+        Some("unwatch") => unwatch_dir(&dir),
         Some("kill") => {
             kill();
         }
@@ -30,7 +38,8 @@ async fn main() {
             // unreachable. Process already exited.
         }
         _ => {
-            eprintln!("dura backs up your work automatically via Git commits
+            eprintln!(
+                "dura backs up your work automatically via Git commits
 
 Usage: dura SUBCOMMAND
 
@@ -48,7 +57,8 @@ kill
 capture
     Run a single backup of an entire repository. This is the one
     single iteration of the `serve` control loop.
-");
+"
+            );
             process::exit(1);
         }
     }
@@ -79,10 +89,10 @@ fn kill() {
 }
 
 /// Look for an executable on the $PATH called `dura-{cmd}`. This
-/// enables extending dura by placing shell scripts in, e.g., /usr/local/bin 
+/// enables extending dura by placing shell scripts in, e.g., /usr/local/bin
 ///
 /// This always either exits `false` or terminates the process. All output,
-/// both stdout and stderr, are piped through the current process and the 
+/// both stdout and stderr, are piped through the current process and the
 /// exit code is also propagated.
 ///
 /// All additional arguments will also be passed to the child process.
@@ -90,7 +100,7 @@ fn find_sub_command() -> bool {
     let args: Vec<String> = std::env::args().collect();
     let cmd = match args.get(1) {
         Some(sub) => format!("dura-{}", sub),
-        None => { return false },
+        None => return false,
     };
 
     let cmd_args = args[2..].as_ref();
@@ -104,7 +114,7 @@ fn find_sub_command() -> bool {
         Ok(mut child) => {
             match child.wait() {
                 Ok(status) => {
-                    // From docs: On Unix, this will return None if the process was 
+                    // From docs: On Unix, this will return None if the process was
                     // terminated by a signal.
                     let code = status.code().unwrap_or(1);
                     process::exit(code)
@@ -115,4 +125,3 @@ fn find_sub_command() -> bool {
         Err(_) => false,
     }
 }
-

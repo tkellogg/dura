@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs::{create_dir_all, File, OpenOptions};
-use std::{io, env};
 use std::path::{Path, PathBuf};
+use std::{env, io};
 
 use serde::{Deserialize, Serialize};
 
@@ -47,7 +47,7 @@ impl Config {
         // up with another reason to use it.
         if let Ok(env_var) = env::var("DURA_HOME") {
             if !env_var.is_empty() {
-                return env_var.into()
+                return env_var.into();
             }
         }
 
