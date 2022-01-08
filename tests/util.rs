@@ -1,4 +1,4 @@
-use std::{fs, path, ops, thread, time};
+use std::{fs, path, ops, thread, time, env};
 use std::process::{Command, Child};
 
 use tempfile;
@@ -95,7 +95,8 @@ impl Dura {
 
     pub fn start_async(&mut self, args: &[&str], is_primary: bool) {
         println!("$ dura {} &", args.join(" "));
-        let child = Command::new("target/debug/dura")
+        let exe = env!("CARGO_BIN_EXE_dura").to_string();
+        let child = Command::new(exe)
             .args(args)
             .env("DURA_HOME", self.home_dir.path())
             .spawn()
