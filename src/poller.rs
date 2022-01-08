@@ -70,7 +70,7 @@ fn process_directory(base_path: &Path, current_path: &Path, value: &WatchConfig,
             info!(operation = %serde_json::to_string(&operation).unwrap(),"info_operation")
         }
     } else {
-        if depth > value.max_depth {
+        if depth >= value.max_depth {
             return;
         }
 
