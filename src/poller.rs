@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process;
 use std::time::Instant;
 
@@ -13,7 +13,7 @@ use crate::snapshots;
 /// Checks the provided `child_path` is a directory.
 /// If either `includes` or `excludes` are set,
 /// checks whether the path is included/excluded respectively.
-fn is_valid_directory(base_path: &Path, child_path: &PathBuf, value: &WatchConfig) -> bool {
+fn is_valid_directory(base_path: &Path, child_path: &Path, value: &WatchConfig) -> bool {
     if !child_path.is_dir() {
         return false;
     }
@@ -21,21 +21,21 @@ fn is_valid_directory(base_path: &Path, child_path: &PathBuf, value: &WatchConfi
     let includes = &value.include;
     let excludes = &value.exclude;
 
-    if includes.len() > 0 {
-        let relative = child_path.strip_prefix(base_path).unwrap().to_str().unwrap();
-        includes
+    let mut include = true;
+
+    if !excludes.is_empty() {
+        include = !excludes
             .iter()
-            .find(|&include| include.starts_with(relative))
-            .is_some()
-    } else if excludes.len() > 0 {
-        let relative = child_path.strip_prefix(base_path).unwrap().to_str().unwrap();
-        excludes
-            .iter()
-            .find(|&exclude| exclude.starts_with(relative))
-            .is_none()
-    } else {
-        true
+            .any(|exclude| child_path.starts_with(base_path.join(exclude)));
     }
+
+    if !include && !includes.is_empty() {
+        include = includes
+            .iter()
+            .any(|include| base_path.join(include).starts_with(child_path));
+    }
+
+    include
 }
 
 /// If the directory is a repo, attempts to create a snapshot.
@@ -74,18 +74,20 @@ fn process_directory(base_path: &Path, current_path: &Path, value: &WatchConfig,
             return;
         }
 
-        let paths = fs::read_dir(current_path).unwrap();
+        if let Ok(paths) = fs::read_dir(current_path) {
+            paths
+                .filter_map(|entry| {
+                    if let Ok(entry) = entry {
+                        let child_path = entry.path();
+                        if is_valid_directory(base_path, &child_path, value) {
+                            return Some(child_path);
+                        }
+                    }
 
-        paths
-            .filter_map(|entry| {
-                let child_path = entry.unwrap().path();
-                if is_valid_directory(base_path, &child_path, value) {
-                    Some(child_path)
-                } else {
                     None
-                }
-            })
-            .for_each(|path| process_directory(base_path, path.as_path(), value, depth + 1));
+                })
+                .for_each(|path| process_directory(base_path, path.as_path(), value, depth + 1));
+        }
     }
 }
 
