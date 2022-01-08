@@ -16,6 +16,10 @@ impl fmt::Display for CaptureStatus {
     }
 }
 
+pub fn is_repo(path: &Path) -> bool {
+    Repository::open(path).is_ok()
+}
+
 pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
     let repo = Repository::open(path)?;
     let head = repo.head()?.peel_to_commit()?;

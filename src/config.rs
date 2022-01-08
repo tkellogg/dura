@@ -8,11 +8,19 @@ use serde::{Deserialize, Serialize};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct WatchConfig {}
+pub struct WatchConfig {
+    pub include: Vec<String>,
+    pub exclude: Vec<String>,
+    pub max_depth: u8,
+}
 
 impl WatchConfig {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            include: vec![],
+            exclude: vec![],
+            max_depth: 255,
+        }
     }
 }
 
