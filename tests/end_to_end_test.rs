@@ -1,12 +1,11 @@
 mod util;
 
-use std::fs;
-
 use dura::config::Config;
+use std::fs;
 
 #[test]
 fn start_serve() {
-    let mut dura = util::Dura::new();
+    let mut dura = util::dura::Dura::new();
     assert_eq!(None, dura.pid(true));
     assert_eq!(None, dura.get_config());
 
@@ -25,7 +24,7 @@ fn start_serve_with_null_pid_in_config() {
     cfg.pid = None;
     cfg.save();
 
-    let mut dura = util::Dura::new();
+    let mut dura = util::dura::Dura::new();
     assert_eq!(None, dura.pid(true));
     assert_eq!(None, dura.get_config());
 
@@ -40,7 +39,7 @@ fn start_serve_with_null_pid_in_config() {
 
 #[test]
 fn start_serve_with_other_pid_in_config() {
-    let mut dura = util::Dura::new();
+    let mut dura = util::dura::Dura::new();
     let mut cfg = Config::empty();
     cfg.pid = Some(12345);
     dura.save_config(&cfg);
@@ -59,9 +58,13 @@ fn start_serve_with_other_pid_in_config() {
 
 #[test]
 fn start_serve_with_invalid_json() {
-    let mut dura = util::Dura::new();
+    let mut dura = util::dura::Dura::new();
     let cfg_path = dura.config_path();
-    fs::write(cfg_path, "{\"pid\":34725,\"repos\":{}}Users/timkellogg/code/dura\":{}}}");
+    fs::write(
+        cfg_path,
+        "{\"pid\":34725,\"repos\":{}}Users/timkellogg/code/dura\":{}}}",
+    )
+    .unwrap();
 
     assert_eq!(None, dura.pid(true));
     assert_eq!(None, dura.get_config());
@@ -74,4 +77,3 @@ fn start_serve_with_invalid_json() {
     assert_ne!(None, cfg);
     assert_eq!(dura.pid(true), cfg.unwrap().pid);
 }
-
