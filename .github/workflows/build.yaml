@@ -13,6 +13,11 @@ jobs:
         with:
             fetch-depth: 1
 
+      - name: Update Ubuntu
+        run: |
+            sudo apt-get update
+            sudo apt-get install libc6
+
       - name: Install Nix
         uses: cachix/install-nix-action@v16
         with:
