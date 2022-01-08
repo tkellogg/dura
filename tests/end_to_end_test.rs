@@ -61,7 +61,8 @@ fn start_serve_with_other_pid_in_config() {
 fn start_serve_with_invalid_json() {
     let mut dura = util::Dura::new();
     let cfg_path = dura.config_path();
-    fs::write(cfg_path, "{\"pid\":34725,\"repos\":{}}Users/timkellogg/code/dura\":{}}}");
+    Config::create_dir(cfg_path.as_path());
+    fs::write(cfg_path, "{\"pid\":34725,\"repos\":{}}Users/timkellogg/code/dura\":{}}}").unwrap();
 
     assert_eq!(None, dura.pid(true));
     assert_eq!(None, dura.get_config());

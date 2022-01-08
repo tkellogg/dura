@@ -73,9 +73,13 @@ impl Config {
         self.save_to_path(Self::default_path().as_path())
     }
 
+    pub fn create_dir(path: &Path) {
+        path.parent().map(|dir| create_dir_all(dir).unwrap());
+    }
+
     /// Used by tests to save to a temp dir
     pub fn save_to_path(&self, path: &Path) {
-        path.parent().map(create_dir_all);
+        Self::create_dir(path);
 
         let file = OpenOptions::new()
             .write(true)
