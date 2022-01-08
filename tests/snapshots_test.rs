@@ -4,7 +4,7 @@ mod util;
 
 #[test]
 fn change_single_file() {
-    let mut repo = util::GitRepo::new();
+    let mut repo = util::git_repo::GitRepo::new();
     repo.init();
     repo.write_file("foo.txt");
     repo.commit_all();
@@ -18,7 +18,7 @@ fn change_single_file() {
 
 #[test]
 fn no_changes() {
-    let repo = util::GitRepo::new();
+    let repo = util::git_repo::GitRepo::new();
     repo.init();
     repo.write_file("foo.txt");
     repo.commit_all();
@@ -31,7 +31,7 @@ fn no_changes() {
 /// It keeps capturing commits during a merge conflict
 #[test]
 fn during_merge_conflicts() {
-    let mut repo = util::GitRepo::new();
+    let mut repo = util::git_repo::GitRepo::new();
     repo.init();
 
     // parent commit
@@ -52,7 +52,7 @@ fn during_merge_conflicts() {
     // MERGE FAIL
     let merge_result = repo.git(&["merge", "branch1"]);
     assert_eq!(merge_result, None);
-    repo.git(&["status"]);  // debug info
+    repo.git(&["status"]); // debug info
 
     // change a file anyway
     repo.change_file("foo.txt");
@@ -62,4 +62,3 @@ fn during_merge_conflicts() {
     assert_ne!(status.commit_hash, status.base_hash);
     assert_eq!(status.dura_branch, format!("dura/{}", status.base_hash));
 }
-

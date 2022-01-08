@@ -64,13 +64,8 @@ where
     }
 }
 
+#[derive(Default)]
 struct JsonVisitor(BTreeMap<&'static str, serde_json::Value>);
-
-impl Default for JsonVisitor {
-    fn default() -> Self {
-        JsonVisitor(Default::default())
-    }
-}
 
 impl Visit for JsonVisitor {
     fn record_i64(&mut self, field: &Field, value: i64) {
@@ -88,7 +83,7 @@ impl Visit for JsonVisitor {
     fn record_str(&mut self, field: &Field, value: &str) {
         match serde_json::from_str::<serde_json::Value>(value) {
             Ok(value) => {
-                self.0.insert(field.name(), value.into());
+                self.0.insert(field.name(), value);
             }
             Err(_) => {
                 self.0.insert(field.name(), value.to_string().into());
@@ -104,7 +99,7 @@ impl Visit for JsonVisitor {
         let s = format!("{:?}", value);
         match serde_json::from_str::<serde_json::Value>(&s) {
             Ok(value) => {
-                self.0.insert(field.name(), value.into());
+                self.0.insert(field.name(), value);
             }
             Err(_) => {
                 self.0.insert(field.name(), s.into());
