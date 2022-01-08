@@ -44,8 +44,8 @@ async fn main() {
 Usage: dura SUBCOMMAND
 
 serve
-    Starts the worker that listens for file changes. If another 
-    process is aleady running, this will do it's best to terminate
+    Starts the worker that listens for file changes. If another
+    process is already running, this will do it's best to terminate
     the other process.
 
 watch
