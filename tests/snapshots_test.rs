@@ -13,7 +13,7 @@ fn change_single_file() {
     let status = snapshots::capture(repo.dir.path()).unwrap().unwrap();
 
     assert_ne!(status.commit_hash, status.base_hash);
-    assert_eq!(status.dura_branch, format!("dura-{}", status.base_hash));
+    assert_eq!(status.dura_branch, format!("dura/{}", status.base_hash));
 }
 
 #[test]
@@ -60,5 +60,5 @@ fn during_merge_conflicts() {
 
     // Regular dura commit
     assert_ne!(status.commit_hash, status.base_hash);
-    assert_eq!(status.dura_branch, format!("dura-{}", status.base_hash));
+    assert_eq!(status.dura_branch, format!("dura/{}", status.base_hash));
 }
