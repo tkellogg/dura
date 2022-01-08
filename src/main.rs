@@ -1,5 +1,3 @@
-use std::process;
-
 use dura::config::{Config, WatchConfig};
 use dura::logger::NestedJsonLayer;
 use dura::poller;
@@ -7,61 +5,74 @@ use dura::snapshots;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
+use clap::{App, AppSettings};
 
 #[tokio::main]
 async fn main() {
     let dir = std::env::current_dir().unwrap();
-    match std::env::args().nth(1).as_deref() {
-        Some("capture") => {
-            if let Some(oid) = snapshots::capture(&dir).unwrap() {
-                println!("{}", oid);
+
+    let matches = App::new("dura")
+        .about("Dura backs up your work automatically via Git commits.")
+        .version("0.1.0")
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .author("Tim Kellogg and the Internet")
+        .subcommand(
+            App::new("capture")
+                .short_flag('C')
+                .long_flag("capture")
+                .about("Run a single backup of an entire repository. This is the one single iteration of the `serve` control loop.")
+        )
+        .subcommand(
+            App::new("serve")
+                .short_flag('S')
+                .long_flag("serve")
+                .about("Starts the worker that listens for file changes. If another process is already running, this will do it's best to terminate the other process.")
+        )
+        .subcommand(
+            App::new("watch")
+                .short_flag('W')
+                .long_flag("watch")
+                .about("Add the current working directory as a repository to watch.")
+        )
+        .subcommand(
+            App::new("unwatch")
+                .short_flag('U')
+                .long_flag("unwatch")
+                .about("Missing description")
+        )
+        .subcommand(
+            App::new("kill")
+                .short_flag('K')
+                .long_flag("kill")
+                .about("Stop the running worker (should only be a single worker).")
+        )
+        .get_matches();
+
+        match matches.subcommand() {
+            Some(("capture", _)) => {
+                if let Some(oid) = snapshots::capture(&dir).unwrap() {
+                    println!("{}", oid);
+                }
             }
+            Some(("serve", _)) => {
+                let env_filter =
+                    EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+                Registry::default()
+                    .with(env_filter)
+                    .with(NestedJsonLayer::new(std::io::stdout))
+                    .init();
+                tracing::info!(pid = std::process::id());
+                poller::start().await;
+            }
+            Some(("watch", _)) => {
+                watch_dir(&dir);
+            }
+            Some(("unwatch", _)) => unwatch_dir(&dir),
+            Some(("kill", _)) => {
+                kill();
+            }
+            _ => unreachable!(),
         }
-        Some("serve") => {
-            let env_filter =
-                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-            Registry::default()
-                .with(env_filter)
-                .with(NestedJsonLayer::new(std::io::stdout))
-                .init();
-            tracing::info!(pid = std::process::id());
-            poller::start().await;
-        }
-        Some("watch") => {
-            watch_dir(&dir);
-        }
-        Some("unwatch") => unwatch_dir(&dir),
-        Some("kill") => {
-            kill();
-        }
-        Some(_) if find_sub_command() => {
-            // unreachable. Process already exited.
-        }
-        _ => {
-            eprintln!(
-                "dura backs up your work automatically via Git commits
-
-Usage: dura SUBCOMMAND
-
-serve
-    Starts the worker that listens for file changes. If another
-    process is already running, this will do it's best to terminate
-    the other process.
-
-watch
-    Add the current working directory as a repository to watch.
-
-kill
-    Stop the running worker (should only be a single worker).
-
-capture
-    Run a single backup of an entire repository. This is the one
-    single iteration of the `serve` control loop.
-"
-            );
-            process::exit(1);
-        }
-    }
 }
 
 fn watch_dir(path: &std::path::Path) {
@@ -86,42 +97,4 @@ fn kill() {
     let mut config = Config::load();
     config.pid = None;
     config.save();
-}
-
-/// Look for an executable on the $PATH called `dura-{cmd}`. This
-/// enables extending dura by placing shell scripts in, e.g., /usr/local/bin
-///
-/// This always either exits `false` or terminates the process. All output,
-/// both stdout and stderr, are piped through the current process and the
-/// exit code is also propagated.
-///
-/// All additional arguments will also be passed to the child process.
-fn find_sub_command() -> bool {
-    let args: Vec<String> = std::env::args().collect();
-    let cmd = match args.get(1) {
-        Some(sub) => format!("dura-{}", sub),
-        None => return false,
-    };
-
-    let cmd_args = args[2..].as_ref();
-    let child_proc = process::Command::new(cmd.as_str())
-        .args(cmd_args)
-        .stdout(process::Stdio::inherit())
-        .stderr(process::Stdio::inherit())
-        .spawn();
-
-    match child_proc {
-        Ok(mut child) => {
-            match child.wait() {
-                Ok(status) => {
-                    // From docs: On Unix, this will return None if the process was
-                    // terminated by a signal.
-                    let code = status.code().unwrap_or(1);
-                    process::exit(code)
-                }
-                Err(_) => false,
-            }
-        }
-        Err(_) => false,
-    }
 }
