@@ -26,7 +26,7 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
         return Ok(None);
     }
 
-    let branch_name = format!("dura-{}", head.id());
+    let branch_name = format!("dura/{}", head.id());
     let branch_commit = find_head(&repo, branch_name.as_str());
 
     if repo.find_branch(&branch_name, BranchType::Local).is_err() {
