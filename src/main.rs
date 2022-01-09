@@ -1,3 +1,6 @@
+use std::fs::OpenOptions;
+
+use clap::{App, AppSettings, Arg};
 use dura::config::{Config, WatchConfig};
 use dura::logger::NestedJsonLayer;
 use dura::poller;
@@ -5,7 +8,6 @@ use dura::snapshots;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
-use clap::{App, AppSettings};
 
 #[tokio::main]
 async fn main() {
@@ -27,7 +29,11 @@ async fn main() {
                 .short_flag('S')
                 .long_flag("serve")
                 .about("Starts the worker that listens for file changes. If another process is already running, this will do it's best to terminate the other process.")
-        )
+                .arg(
+                    Arg::new("logfile")
+                    .required(false)
+                    .help("Sets custom logfile. Default is logging to stdout")
+        ))
         .subcommand(
             App::new("watch")
                 .short_flag('W')
@@ -48,31 +54,57 @@ async fn main() {
         )
         .get_matches();
 
-        match matches.subcommand() {
-            Some(("capture", _)) => {
-                if let Some(oid) = snapshots::capture(&dir).unwrap() {
-                    println!("{}", oid);
+    match matches.subcommand() {
+        Some(("capture", _)) => {
+            if let Some(oid) = snapshots::capture(&dir).unwrap() {
+                println!("{}", oid);
+            }
+        }
+        Some(("serve", m)) => {
+            let env_filter =
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+            match m.value_of("logfile") {
+                Some(logfile) => {
+                    let file = logfile.to_string();
+                    Registry::default()
+                        .with(env_filter)
+                        .with(NestedJsonLayer::new(move || {
+                            let result_open_file =
+                                OpenOptions::new().append(true).create(true).open(&file);
+                            match result_open_file {
+                                Ok(f) => f,
+                                Err(e) => {
+                                    eprintln!(
+                                        "Unable to open file {} for logging due to {}",
+                                        file, e
+                                    );
+                                    std::process::exit(1);
+                                }
+                            }
+                        }))
+                        .init();
+                }
+                None => {
+                    Registry::default()
+                        .with(env_filter)
+                        .with(NestedJsonLayer::new(std::io::stdout))
+                        .init();
                 }
             }
-            Some(("serve", _)) => {
-                let env_filter =
-                    EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-                Registry::default()
-                    .with(env_filter)
-                    .with(NestedJsonLayer::new(std::io::stdout))
-                    .init();
-                tracing::info!(pid = std::process::id());
-                poller::start().await;
-            }
-            Some(("watch", _)) => {
-                watch_dir(&dir);
-            }
-            Some(("unwatch", _)) => unwatch_dir(&dir),
-            Some(("kill", _)) => {
-                kill();
-            }
-            _ => unreachable!(),
+
+            tracing::info!(pid = std::process::id());
+            poller::start().await;
         }
+        Some(("watch", _)) => {
+            watch_dir(&dir);
+        }
+        Some(("unwatch", _)) => unwatch_dir(&dir),
+        Some(("kill", _)) => {
+            kill();
+        }
+        _ => unreachable!(),
+    }
 }
 
 fn watch_dir(path: &std::path::Path) {
