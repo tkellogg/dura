@@ -3,21 +3,20 @@ use std::{fs, path, process::Command};
 /// A test utility to make our tests more readable
 pub struct GitRepo {
     // implements Drop to delete the directory
-    pub dir: tempfile::TempDir,
+    pub dir: path::PathBuf,
 
     // Source of entropy for change_file
     counter: u32,
 }
 
 impl GitRepo {
-    pub fn new() -> Self {
-        let dir = tempfile::tempdir().unwrap();
+    pub fn new(dir: path::PathBuf) -> Self {
         Self { dir, counter: 0 }
     }
 
     pub fn git(&self, args: &[&str]) -> Option<String> {
         println!("$ git {}", args.join(" "));
-        let git_dir = self.dir.path().join(path::Path::new(".git"));
+        let git_dir = self.dir.as_path().join(path::Path::new(".git"));
 
         let child_proc = Command::new("git")
             .args(
@@ -26,7 +25,7 @@ impl GitRepo {
                         "--git-dir",
                         git_dir.to_str().unwrap(),
                         "--work-tree",
-                        self.dir.path().to_str().unwrap(),
+                        self.dir.as_path().to_str().unwrap(),
                     ],
                     args,
                 ]
@@ -66,7 +65,7 @@ impl GitRepo {
 
     pub fn write_file(&self, path: &str) {
         let content = "initial rev";
-        let path_obj = self.dir.path().join(path);
+        let path_obj = self.dir.as_path().join(path);
         println!("$ echo '{}' > {}", content, path);
         fs::write(path_obj, content).unwrap();
     }
@@ -76,7 +75,7 @@ impl GitRepo {
         self.counter += 1;
         let content = format!("change {}", self.counter);
         println!("$ echo '{}' > {}", content, path);
-        let path_obj = self.dir.path().join(path);
+        let path_obj = self.dir.as_path().join(path);
         fs::write(path_obj, content).unwrap();
     }
 }

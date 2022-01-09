@@ -12,3 +12,12 @@ I try to get to PRs within a day. I'm usually quicker than that, but sometimes t
 
 Oh! And please be kind. We're all here because we want to help other people. Please remember that.
 
+
+# Coding guidelines
+
+## Printing output
+* All `stdout` is routed through the logger and is JSON.
+* Messages to the user should be on `stderr` and are plain text (e.g. can't take a lock)
+* Use serialized structs to write JSON logs, so that the structure remains mostly backward compatible. Try not to rename fields, in case someone has written scripts against it.
+
+

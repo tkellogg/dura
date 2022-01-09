@@ -4,13 +4,14 @@ mod util;
 
 #[test]
 fn change_single_file() {
-    let mut repo = util::git_repo::GitRepo::new();
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
     repo.init();
     repo.write_file("foo.txt");
     repo.commit_all();
 
     repo.change_file("foo.txt");
-    let status = snapshots::capture(repo.dir.path()).unwrap().unwrap();
+    let status = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
 
     assert_ne!(status.commit_hash, status.base_hash);
     assert_eq!(status.dura_branch, format!("dura/{}", status.base_hash));
@@ -18,12 +19,13 @@ fn change_single_file() {
 
 #[test]
 fn no_changes() {
-    let repo = util::git_repo::GitRepo::new();
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
     repo.init();
     repo.write_file("foo.txt");
     repo.commit_all();
 
-    let status = snapshots::capture(repo.dir.path()).unwrap();
+    let status = snapshots::capture(repo.dir.as_path()).unwrap();
 
     assert_eq!(status, None);
 }
@@ -31,7 +33,8 @@ fn no_changes() {
 /// It keeps capturing commits during a merge conflict
 #[test]
 fn during_merge_conflicts() {
-    let mut repo = util::git_repo::GitRepo::new();
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
     repo.init();
 
     // parent commit
@@ -56,7 +59,7 @@ fn during_merge_conflicts() {
 
     // change a file anyway
     repo.change_file("foo.txt");
-    let status = snapshots::capture(repo.dir.path()).unwrap().unwrap();
+    let status = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
 
     // Regular dura commit
     assert_ne!(status.commit_hash, status.base_hash);
