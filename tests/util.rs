@@ -1,4 +1,5 @@
 use std::{fs, path, ops, thread, time, env};
+use std::path::Path;
 use std::process::{Command, Child};
 
 use tempfile;
@@ -17,6 +18,11 @@ pub struct GitRepo {
 impl GitRepo {
     pub fn new() -> Self {
         let dir = tempfile::tempdir().unwrap();
+        Self { dir, counter: 0 }
+    }
+
+    pub fn new_in<P: AsRef<Path>>(dir: P) -> Self {
+        let dir = tempfile::tempdir_in(dir).unwrap();
         Self { dir, counter: 0 }
     }
 
