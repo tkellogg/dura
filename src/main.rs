@@ -1,6 +1,7 @@
 use std::fs::OpenOptions;
+use std::path::Path;
 
-use clap::{App, AppSettings, Arg};
+use clap::{arg, App, AppSettings, Arg, Values};
 use dura::config::{Config, WatchConfig};
 use dura::logger::NestedJsonLayer;
 use dura::poller;
@@ -11,7 +12,11 @@ use tracing_subscriber::{EnvFilter, Registry};
 
 #[tokio::main]
 async fn main() {
-    let dir = std::env::current_dir().unwrap();
+    let cwd = std::env::current_dir().unwrap();
+
+    let arg_directory = Arg::new("directory")
+        .default_value_os(cwd.as_os_str())
+        .help("The directory to watch. Defaults to current directory");
 
     let matches = App::new("dura")
         .about("Dura backs up your work automatically via Git commits.")
@@ -23,6 +28,7 @@ async fn main() {
                 .short_flag('C')
                 .long_flag("capture")
                 .about("Run a single backup of an entire repository. This is the one single iteration of the `serve` control loop.")
+                .arg(arg_directory.clone())
         )
         .subcommand(
             App::new("serve")
@@ -30,7 +36,7 @@ async fn main() {
                 .long_flag("serve")
                 .about("Starts the worker that listens for file changes. If another process is already running, this will do it's best to terminate the other process.")
                 .arg(
-                    Arg::new("logfile")
+                    arg!(--logfile)
                     .required(false)
                     .help("Sets custom logfile. Default is logging to stdout")
         ))
@@ -39,12 +45,33 @@ async fn main() {
                 .short_flag('W')
                 .long_flag("watch")
                 .about("Add the current working directory as a repository to watch.")
+                .arg(arg_directory.clone())
+                .arg(arg!(-i --include)
+                    .required(false)
+                    .takes_value(true)
+                    .use_delimiter(true)
+                    .require_delimiter(true)
+                    .help("Overrides excludes by re-including specific directories relative to the watch directory.")
+                )
+                .arg(arg!(-e --exclude)
+                    .required(false)
+                    .takes_value(true)
+                    .use_delimiter(true)
+                    .require_delimiter(true)
+                    .help("Excludes specific directories relative to the watch directory")
+                )
+                .arg(arg!(-d --maxdepth)
+                    .required(false)
+                    .default_value("255")
+                    .help("Determines the depth to recurse into when scanning directories")
+                )
         )
         .subcommand(
             App::new("unwatch")
                 .short_flag('U')
                 .long_flag("unwatch")
                 .about("Missing description")
+                .arg(arg_directory)
         )
         .subcommand(
             App::new("kill")
@@ -55,16 +82,17 @@ async fn main() {
         .get_matches();
 
     match matches.subcommand() {
-        Some(("capture", _)) => {
-            if let Some(oid) = snapshots::capture(&dir).unwrap() {
+        Some(("capture", m)) => {
+            let dir = Path::new(m.value_of("directory").unwrap());
+            if let Some(oid) = snapshots::capture(dir).unwrap() {
                 println!("{}", oid);
             }
         }
-        Some(("serve", m)) => {
+        Some(("serve", arg_matches)) => {
             let env_filter =
                 EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-            match m.value_of("logfile") {
+            match arg_matches.value_of("logfile") {
                 Some(logfile) => {
                     let file = logfile.to_string();
                     Registry::default()
@@ -96,10 +124,37 @@ async fn main() {
             tracing::info!(pid = std::process::id());
             poller::start().await;
         }
-        Some(("watch", _)) => {
-            watch_dir(&dir);
+        Some(("watch", arg_matches)) => {
+            let dir = Path::new(arg_matches.value_of("directory").unwrap());
+
+            let include = arg_matches
+                .values_of("include")
+                .unwrap_or(Values::default())
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
+            let exclude = arg_matches
+                .values_of("exclude")
+                .unwrap_or(Values::default())
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
+            let max_depth = arg_matches
+                .value_of("maxdepth")
+                .unwrap_or("255")
+                .parse::<u8>()
+                .expect("Max depth must be between 0-255");
+
+            let watch_config = WatchConfig {
+                include,
+                exclude,
+                max_depth,
+            };
+
+            watch_dir(dir, watch_config);
         }
-        Some(("unwatch", _)) => unwatch_dir(&dir),
+        Some(("unwatch", arg_matches)) => {
+            let dir = Path::new(arg_matches.value_of("directory").unwrap());
+            unwatch_dir(dir)
+        }
         Some(("kill", _)) => {
             kill();
         }
@@ -107,9 +162,9 @@ async fn main() {
     }
 }
 
-fn watch_dir(path: &std::path::Path) {
+fn watch_dir(path: &std::path::Path, watch_config: WatchConfig) {
     let mut config = Config::load();
-    config.set_watch(path.to_str().unwrap().to_string(), WatchConfig::new());
+    config.set_watch(path.to_str().unwrap().to_string(), watch_config);
     config.save();
 }
 
