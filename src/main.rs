@@ -88,11 +88,11 @@ async fn main() {
                 println!("{}", oid);
             }
         }
-        Some(("serve", m)) => {
+        Some(("serve", arg_matches)) => {
             let env_filter =
                 EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-            match m.value_of("logfile") {
+            match arg_matches.value_of("logfile") {
                 Some(logfile) => {
                     let file = logfile.to_string();
                     Registry::default()
@@ -124,20 +124,20 @@ async fn main() {
             tracing::info!(pid = std::process::id());
             poller::start().await;
         }
-        Some(("watch", m)) => {
-            let dir = Path::new(m.value_of("directory").unwrap());
+        Some(("watch", arg_matches)) => {
+            let dir = Path::new(arg_matches.value_of("directory").unwrap());
 
-            let include = m
+            let include = arg_matches
                 .values_of("include")
                 .unwrap_or(Values::default())
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
-            let exclude = m
+            let exclude = arg_matches
                 .values_of("exclude")
                 .unwrap_or(Values::default())
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
-            let max_depth = m
+            let max_depth = arg_matches
                 .value_of("maxdepth")
                 .unwrap_or("255")
                 .parse::<u8>()
@@ -151,8 +151,8 @@ async fn main() {
 
             watch_dir(dir, watch_config);
         }
-        Some(("unwatch", m)) => {
-            let dir = Path::new(m.value_of("directory").unwrap());
+        Some(("unwatch", arg_matches)) => {
+            let dir = Path::new(arg_matches.value_of("directory").unwrap());
             unwatch_dir(dir)
         }
         Some(("kill", _)) => {
