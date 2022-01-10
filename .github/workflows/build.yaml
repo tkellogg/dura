@@ -1,23 +1,28 @@
-name: Build and test
+name: Build
 
-on: [push, pull_request]
+on: [workflow_dispatch, push, pull_request]
 
 jobs:
-  dependencies:
-    name: Build dependencies
-    runs-on: ubuntu-latest
+    build:
+        name: Build
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: Check out source files
-        uses: actions/checkout@v2
-        with:
-            fetch-depth: 1
+        steps:
+            - name: Check out source files
+              uses: actions/checkout@v2
+              with:
+                  fetch-depth: 1
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+            - uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --all-features
+            - uses: actions-rs/cargo@v1
+              with:
+                  command: build
+                  args: --release --all-features
+
+            - uses: actions/upload-artifact@v2
+              with:
+                  name: dura
+                  path: ${{ github.workspace }}/target/release/dura
