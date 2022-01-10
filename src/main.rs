@@ -1,7 +1,7 @@
 use std::fs::OpenOptions;
 use std::path::Path;
 
-use clap::{App, AppSettings, Arg};
+use clap::{arg, App, AppSettings, Arg, Values};
 use dura::config::{Config, WatchConfig};
 use dura::logger::NestedJsonLayer;
 use dura::poller;
@@ -46,6 +46,25 @@ async fn main() {
                 .long_flag("watch")
                 .about("Add the current working directory as a repository to watch.")
                 .arg(arg_directory.clone())
+                .arg(arg!(-i --include)
+                    .required(false)
+                    .takes_value(true)
+                    .use_delimiter(true)
+                    .require_delimiter(true)
+                    .help("Overrides excludes by re-including specific directories relative to the watch directory.")
+                )
+                .arg(arg!(-e --exclude)
+                    .required(false)
+                    .takes_value(true)
+                    .use_delimiter(true)
+                    .require_delimiter(true)
+                    .help("Excludes specific directories relative to the watch directory")
+                )
+                .arg(arg!(-d --maxdepth)
+                    .required(false)
+                    .default_value("255")
+                    .help("Determines the depth to recurse into when scanning directories")
+                )
         )
         .subcommand(
             App::new("unwatch")
@@ -107,7 +126,30 @@ async fn main() {
         }
         Some(("watch", m)) => {
             let dir = Path::new(m.value_of("directory").unwrap());
-            watch_dir(dir);
+
+            let include = m
+                .values_of("include")
+                .unwrap_or(Values::default())
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
+            let exclude = m
+                .values_of("exclude")
+                .unwrap_or(Values::default())
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
+            let max_depth = m
+                .value_of("maxdepth")
+                .unwrap_or("255")
+                .parse::<u8>()
+                .expect("Max depth must be between 0-255");
+
+            let watch_config = WatchConfig {
+                include,
+                exclude,
+                max_depth,
+            };
+
+            watch_dir(dir, watch_config);
         }
         Some(("unwatch", m)) => {
             let dir = Path::new(m.value_of("directory").unwrap());
@@ -120,9 +162,9 @@ async fn main() {
     }
 }
 
-fn watch_dir(path: &std::path::Path) {
+fn watch_dir(path: &std::path::Path, watch_config: WatchConfig) {
     let mut config = Config::load();
-    config.set_watch(path.to_str().unwrap().to_string(), WatchConfig::new());
+    config.set_watch(path.to_str().unwrap().to_string(), watch_config);
     config.save();
 }
 
