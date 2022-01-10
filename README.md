@@ -53,11 +53,11 @@ process that it should exit if there is a `serve` process running.
 
 ## How to recover
 
-The `dura` branch that's tracking your current uncommitted changes looks like `dura-f4a88e5ea0f1f7492845f7021ae82db70f14c725`.
+The `dura` branch that's tracking your current uncommitted changes looks like `dura/f4a88e5ea0f1f7492845f7021ae82db70f14c725`.
 In $SHELL, you can get the branch name via:
 
 ```bash
-$ echo "dura-$(git rev-parse HEAD)"
+$ echo "dura/$(git rev-parse HEAD)"
 ```
 
 Use `git log` or [`tig`](https://jonas.github.io/tig/) to figure out which commit you want to rollback to. Copy the hash
