@@ -3,8 +3,8 @@ name: Build
 on: [workflow_dispatch, push, pull_request]
 
 jobs:
-    build:
-        name: Build
+    build-linux:
+        name: build-linux
         runs-on: ubuntu-latest
 
         steps:
@@ -13,16 +13,94 @@ jobs:
               with:
                   fetch-depth: 1
 
-            - uses: actions-rs/toolchain@v1
+            - name: Update Toolchain
+              uses: actions-rs/toolchain@v1
               with:
                   toolchain: stable
 
-            - uses: actions-rs/cargo@v1
+            - name: Build
+              uses: actions-rs/cargo@v1
               with:
                   command: build
                   args: --release --all-features
 
-            - uses: actions/upload-artifact@v2
+            - name: Basic Testing
+              continue-on-error: true
+              run: |
+                  ${{ github.workspace }}/target/release/dura serve &
+                  sleep 15s
+                  ${{ github.workspace }}/target/release/dura kill
+
+            - name: Upload Binary
+              uses: actions/upload-artifact@v2
               with:
-                  name: dura
+                  name: dura-linux-x86_64
                   path: ${{ github.workspace }}/target/release/dura
+
+    build-macos:
+        name: build-macos
+        runs-on: macos-latest
+
+        steps:
+            - name: Check out source files
+              uses: actions/checkout@v2
+              with:
+                  fetch-depth: 1
+
+            - name: Update Toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+
+            - name: Build
+              uses: actions-rs/cargo@v1
+              with:
+                  command: build
+                  args: --release --all-features
+
+            - name: Basic Testing
+              continue-on-error: true
+              run: |
+                  ${{ github.workspace }}/target/release/dura serve &
+                  sleep 15s
+                  ${{ github.workspace }}/target/release/dura kill
+
+            - name: Upload Binary
+              uses: actions/upload-artifact@v2
+              with:
+                  name: dura-macos-x86_64
+                  path: ${{ github.workspace }}/target/release/dura
+
+    build-windows:
+        name: build-windows
+        runs-on: windows-latest
+
+        steps:
+            - name: Check out source files
+              uses: actions/checkout@v2
+              with:
+                  fetch-depth: 1
+
+            - name: Update Toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+
+            - name: Build
+              uses: actions-rs/cargo@v1
+              with:
+                  command: build
+                  args: --release --all-features
+
+            - name: Basic Testing
+              continue-on-error: true
+              run: |
+                  Start-Process -NoNewWindow ${{ github.workspace }}\target\release\dura.exe serve
+                  Start-Sleep -s 15
+                  ${{ github.workspace }}\target\release\dura.exe kill
+
+            - name: Upload Binary
+              uses: actions/upload-artifact@v2
+              with:
+                  name: dura-windows-x86_64
+                  path: ${{ github.workspace }}\target\release\dura.exe
