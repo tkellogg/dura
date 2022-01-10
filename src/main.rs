@@ -36,7 +36,7 @@ async fn main() {
                 .long_flag("serve")
                 .about("Starts the worker that listens for file changes. If another process is already running, this will do it's best to terminate the other process.")
                 .arg(
-                    Arg::new("logfile")
+                    arg!(--logfile)
                     .required(false)
                     .help("Sets custom logfile. Default is logging to stdout")
         ))
