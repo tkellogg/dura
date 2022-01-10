@@ -1,4 +1,5 @@
 use std::fs::OpenOptions;
+use std::path::Path;
 
 use clap::{App, AppSettings, Arg};
 use dura::config::{Config, WatchConfig};
@@ -11,7 +12,11 @@ use tracing_subscriber::{EnvFilter, Registry};
 
 #[tokio::main]
 async fn main() {
-    let dir = std::env::current_dir().unwrap();
+    let cwd = std::env::current_dir().unwrap();
+
+    let arg_directory = Arg::new("directory")
+        .default_value_os(cwd.as_os_str())
+        .help("The directory to watch. Defaults to current directory");
 
     let matches = App::new("dura")
         .about("Dura backs up your work automatically via Git commits.")
@@ -23,6 +28,7 @@ async fn main() {
                 .short_flag('C')
                 .long_flag("capture")
                 .about("Run a single backup of an entire repository. This is the one single iteration of the `serve` control loop.")
+                .arg(arg_directory.clone())
         )
         .subcommand(
             App::new("serve")
@@ -39,12 +45,14 @@ async fn main() {
                 .short_flag('W')
                 .long_flag("watch")
                 .about("Add the current working directory as a repository to watch.")
+                .arg(arg_directory.clone())
         )
         .subcommand(
             App::new("unwatch")
                 .short_flag('U')
                 .long_flag("unwatch")
                 .about("Missing description")
+                .arg(arg_directory)
         )
         .subcommand(
             App::new("kill")
@@ -55,8 +63,9 @@ async fn main() {
         .get_matches();
 
     match matches.subcommand() {
-        Some(("capture", _)) => {
-            if let Some(oid) = snapshots::capture(&dir).unwrap() {
+        Some(("capture", m)) => {
+            let dir = Path::new(m.value_of("directory").unwrap());
+            if let Some(oid) = snapshots::capture(dir).unwrap() {
                 println!("{}", oid);
             }
         }
@@ -96,10 +105,14 @@ async fn main() {
             tracing::info!(pid = std::process::id());
             poller::start().await;
         }
-        Some(("watch", _)) => {
-            watch_dir(&dir);
+        Some(("watch", m)) => {
+            let dir = Path::new(m.value_of("directory").unwrap());
+            watch_dir(dir);
         }
-        Some(("unwatch", _)) => unwatch_dir(&dir),
+        Some(("unwatch", m)) => {
+            let dir = Path::new(m.value_of("directory").unwrap());
+            unwatch_dir(dir)
+        }
         Some(("kill", _)) => {
             kill();
         }
