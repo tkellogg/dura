@@ -5,6 +5,16 @@ use std::collections::hash_map;
 use crate::config::{Config, WatchConfig};
 use crate::snapshots;
 
+/// Internal structure to facilitate "recursion" without blowing up the stack. Without this, we
+/// could call self.next() recursively whenever there was an I/O error or when we reached the end
+/// of a directory listing. There's no stack space used because we just mutate GitRepoIter, so
+/// might as well turn it into a loop.
+enum CallState {
+    Yield(PathBuf),
+    Recurse,
+    Done
+}
+
 /// Iterator over all Git repos covered by a config.
 ///
 /// The process is naturally recursive, traversing a directory structure, which made it a poor fit
@@ -24,12 +34,8 @@ impl<'a> GitRepoIter<'a> {
     pub fn new(config: &'a Config) -> Self {
         Self { config_iter: config.repos.iter(), sub_iter: Vec::new() }
     }
-}
 
-impl<'a> Iterator for GitRepoIter<'a> {
-    type Item = PathBuf;
-
-    fn next(&mut self) -> Option<Self::Item> {
+    fn get_next(&mut self) -> CallState {
         // pop
         // 
         // Use pop here to manage the lifetime of the iterator. If we used last/peek, we would
@@ -38,13 +44,14 @@ impl<'a> Iterator for GitRepoIter<'a> {
         match self.sub_iter.pop() {
             Some((base_path, watch_config, mut dir_iter)) => {
                 let mut next_next: Option<(PathBuf, WatchConfig, fs::ReadDir)> = None;
-                let mut ret_val = None;
+                let mut ret_val = CallState::Recurse;
                 let max_depth: usize = watch_config.max_depth.into();
                 if let Some(Ok(entry)) = dir_iter.next() {
                     let child_path = entry.path();
                     if is_valid_directory(base_path.as_path(), child_path.as_path(), &watch_config) {
+                        dbg!(child_path.as_path());
                         if snapshots::is_repo(child_path.as_path()) {
-                            ret_val = Some(child_path);
+                            ret_val = CallState::Yield(child_path);
                         } else if self.sub_iter.len() < max_depth {
                             if let Ok(child_dir_iter) = fs::read_dir(child_path.as_path()) {
                                 next_next = Some((base_path.clone(), watch_config.clone(), child_dir_iter))
@@ -52,19 +59,13 @@ impl<'a> Iterator for GitRepoIter<'a> {
                         }
                     }
                     // un-pop
-                    if ret_val.is_none() {
-                        self.sub_iter.push((base_path, watch_config, dir_iter));
-                    }
+                    self.sub_iter.push((base_path, watch_config, dir_iter));
                 }
                 if let Some(tuple) = next_next {
                     // directory recursion
                     self.sub_iter.push(tuple);
                 }
-                if let Some(ret) = ret_val {
-                    Some(ret)
-                } else {
-                    self.next()  // recursive call
-                }
+                ret_val
             }
             None => {
                 // Finished dir, queue up next hashmap pair
@@ -77,11 +78,25 @@ impl<'a> Iterator for GitRepoIter<'a> {
                             // clone because we're going from more global to less global scope
                             self.sub_iter.push((path, watch_config.clone(), dir_iter));
                         }
-                        self.next()  // recursive call
+                        CallState::Recurse
                     }
                     // The end. The real end. This is it.
-                    None => None
+                    None => CallState::Done
                 }
+            }
+        }
+    }
+}
+
+impl<'a> Iterator for GitRepoIter<'a> {
+    type Item = PathBuf;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.get_next() {
+                CallState::Yield(path) => return Some(path),
+                CallState::Recurse => continue,
+                CallState::Done => return None,
             }
         }
     }

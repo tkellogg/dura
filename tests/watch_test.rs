@@ -30,3 +30,14 @@ fn watch_1_dir_with_2_repos() {
     ]);
 }
 
+#[test]
+fn watch_dir_with_repo_nested_3_folders_deep() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = GitRepo::new(tmp.path().join("a/b/c"));
+    repo.init();
+    
+    let dura = Dura::new();
+    dura.run_in_dir(&["watch"], tmp.path());
+    assert_eq!(dura.git_repos(), vec![repo.dir.canonicalize().unwrap()]);
+}
+
