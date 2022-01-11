@@ -113,10 +113,10 @@ impl Dura {
         cfg.save_to_path(self.config_path().as_path());
     }
 
-    pub fn git_repos(&self) -> Vec<path::PathBuf> {
+    pub fn git_repos(&self) -> HashSet<path::PathBuf> {
         match self.get_config() {
             Some(cfg) => cfg.git_repos().collect(),
-            None => vec![],
+            None => HashSet::new(),
         }
     }
 
