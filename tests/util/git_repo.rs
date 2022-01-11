@@ -53,6 +53,7 @@ impl GitRepo {
     }
 
     pub fn init(&self) {
+        fs::create_dir_all(self.dir.as_path()).unwrap();
         let _ = self.git(&["init"]);
         let _ = self.git(&["checkout", "-b", "master"]);
     }

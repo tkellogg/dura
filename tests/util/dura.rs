@@ -42,14 +42,53 @@ impl Dura {
 
     pub fn run(&self, args: &[&str]) {
         println!("$ dura {}", args.join(" "));
-        let mut child = Command::new("target/debug/dura")
+        let exe = env!("CARGO_BIN_EXE_dura").to_string();
+        let child_proc = Command::new(exe)
             .args(args)
             .env("DURA_HOME", self.home_dir.path())
-            .spawn()
-            .unwrap();
+            .output();
 
-        let _ = child.wait().unwrap();
+        if let Ok(output) = child_proc {
+            if !output.status.success() {
+                // This cleans up test development by causing us to fail earlier
+                return;
+            }
+            let text = String::from_utf8(output.stdout).unwrap();
+            if !text.is_empty() {
+                println!("{}", text);
+            }
+            let err = String::from_utf8(output.stderr).unwrap();
+            if !err.is_empty() {
+                println!("{}", err);
+            }
+        }
     }
+
+    pub fn run_in_dir(&self, args: &[&str], dir: &path::Path) {
+        println!("$ dura {}", args.join(" "));
+        let exe = env!("CARGO_BIN_EXE_dura").to_string();
+        let child_proc = Command::new(exe)
+            .args(args)
+            .env("DURA_HOME", self.home_dir.path())
+            .current_dir(dir)
+            .output();
+
+        if let Ok(output) = child_proc {
+            if !output.status.success() {
+                // This cleans up test development by causing us to fail earlier
+                return;
+            }
+            let text = String::from_utf8(output.stdout).unwrap();
+            if !text.is_empty() {
+                println!("{}", text);
+            }
+            let err = String::from_utf8(output.stderr).unwrap();
+            if !err.is_empty() {
+                println!("{}", err);
+            }
+        }
+    }
+
 
     pub fn pid(&self, is_primary: bool) -> Option<u32> {
         if is_primary {
@@ -72,6 +111,13 @@ impl Dura {
 
     pub fn save_config(&self, cfg: &Config) {
         cfg.save_to_path(self.config_path().as_path());
+    }
+
+    pub fn git_repos(&self) -> Vec<path::PathBuf> {
+        match self.get_config() {
+            Some(cfg) => cfg.git_repos().collect(),
+            None => vec![],
+        }
     }
 
     pub fn wait(&self) {

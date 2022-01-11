@@ -2,12 +2,15 @@ use std::collections::HashMap;
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::{env, io};
+use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
+use crate::git_repo_iter::GitRepoIter;
+
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct WatchConfig {
     pub include: Vec<String>,
     pub exclude: Vec<String>,
@@ -33,7 +36,7 @@ impl Default for WatchConfig {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Config {
     pub pid: Option<u32>,
-    pub repos: HashMap<String, WatchConfig>,
+    pub repos: HashMap<String, Rc<WatchConfig>>,
 }
 
 impl Config {
@@ -104,7 +107,7 @@ impl Config {
         if self.repos.contains_key(&path) {
             println!("{} is already being watched", path)
         } else {
-            self.repos.insert(path.clone(), cfg);
+            self.repos.insert(path.clone(), Rc::new(cfg));
             println!("Started watching {}", path)
         }
     }
@@ -114,5 +117,9 @@ impl Config {
             Some(_) => println!("Stopped watching {}", path),
             None => println!("{} is not being watched", path),
         }
+    }
+
+    pub fn git_repos(&self) -> GitRepoIter {
+        GitRepoIter::new(self)
     }
 }
