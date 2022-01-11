@@ -5,9 +5,11 @@ use std::{env, io};
 
 use serde::{Deserialize, Serialize};
 
+use crate::git_repo_iter::GitRepoIter;
+
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct WatchConfig {
     pub include: Vec<String>,
     pub exclude: Vec<String>,
@@ -114,5 +116,9 @@ impl Config {
             Some(_) => println!("Stopped watching {}", path),
             None => println!("{} is not being watched", path),
         }
+    }
+
+    pub fn git_repos(&self) -> GitRepoIter {
+        GitRepoIter::new(self)
     }
 }

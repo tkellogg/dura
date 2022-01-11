@@ -20,7 +20,7 @@ fn change_single_file() {
 #[test]
 fn no_changes() {
     let tmp = tempfile::tempdir().unwrap();
-    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
+    let repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
     repo.init();
     repo.write_file("foo.txt");
     repo.commit_all();

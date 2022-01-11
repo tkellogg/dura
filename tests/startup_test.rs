@@ -78,3 +78,4 @@ fn start_serve_with_invalid_json() {
     assert_ne!(None, cfg);
     assert_eq!(dura.pid(true), cfg.unwrap().pid);
 }
+
