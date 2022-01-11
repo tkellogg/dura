@@ -6,6 +6,7 @@ use tokio::time;
 use tracing::{error, info};
 
 use crate::config::Config;
+use crate::database::RuntimeDatabase;
 use crate::log::Operation;
 use crate::snapshots;
 
@@ -44,14 +45,16 @@ fn process_directory(current_path: &Path) {
 
 #[tracing::instrument]
 fn do_task() {
-    let config = Config::load();
-    if config.pid != Some(process::id()) {
+    let runtime_db = RuntimeDatabase::load();
+    if runtime_db.pid != Some(process::id()) {
         error!(
             "Shutting down because other poller took lock: {:?}",
-            config.pid
+            runtime_db.pid
         );
         process::exit(1);
     }
+
+    let config = Config::load();
 
     for repo in config.git_repos() {
         process_directory(repo.as_path());
@@ -59,9 +62,9 @@ fn do_task() {
 }
 
 pub async fn start() {
-    let mut config = Config::load();
-    config.pid = Some(process::id());
-    config.save();
+    let mut runtime_db = RuntimeDatabase::load();
+    runtime_db.pid = Some(process::id());
+    runtime_db.save();
 
     loop {
         time::sleep(time::Duration::from_secs(5)).await;
