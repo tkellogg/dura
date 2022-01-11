@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::{env, io};
+use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
@@ -35,7 +36,7 @@ impl Default for WatchConfig {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Config {
     pub pid: Option<u32>,
-    pub repos: HashMap<String, WatchConfig>,
+    pub repos: HashMap<String, Rc<WatchConfig>>,
 }
 
 impl Config {
@@ -106,7 +107,7 @@ impl Config {
         if self.repos.contains_key(&path) {
             println!("{} is already being watched", path)
         } else {
-            self.repos.insert(path.clone(), cfg);
+            self.repos.insert(path.clone(), Rc::new(cfg));
             println!("Started watching {}", path)
         }
     }

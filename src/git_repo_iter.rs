@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::{PathBuf, Path};
 use std::collections::hash_map;
+use std::rc::Rc;
 
 use crate::config::{Config, WatchConfig};
 use crate::snapshots;
@@ -25,9 +26,9 @@ enum CallState {
 ///  2. Empty iterator: If we get to the end of a sub-iterator, pop & start from the top
 ///
 pub struct GitRepoIter<'a> {
-    config_iter: hash_map::Iter<'a, String, WatchConfig>,
+    config_iter: hash_map::Iter<'a, String, Rc<WatchConfig>>,
     /// A stack, because we can't use recursion with an iterator (at least not between elements)
-    sub_iter: Vec<(PathBuf, WatchConfig, fs::ReadDir)>,
+    sub_iter: Vec<(Rc<PathBuf>, Rc<WatchConfig>, fs::ReadDir)>,
 }
 
 impl<'a> GitRepoIter<'a> {
@@ -43,7 +44,7 @@ impl<'a> GitRepoIter<'a> {
         // use the iterator. But that means we have to return it to the vec.
         match self.sub_iter.pop() {
             Some((base_path, watch_config, mut dir_iter)) => {
-                let mut next_next: Option<(PathBuf, WatchConfig, fs::ReadDir)> = None;
+                let mut next_next: Option<(Rc<PathBuf>, Rc<WatchConfig>, fs::ReadDir)> = None;
                 let mut ret_val = CallState::Recurse;
                 let max_depth: usize = watch_config.max_depth.into();
                 if let Some(Ok(entry)) = dir_iter.next() {
@@ -54,12 +55,12 @@ impl<'a> GitRepoIter<'a> {
                             ret_val = CallState::Yield(child_path);
                         } else if self.sub_iter.len() < max_depth {
                             if let Ok(child_dir_iter) = fs::read_dir(child_path.as_path()) {
-                                next_next = Some((base_path.clone(), watch_config.clone(), child_dir_iter))
+                                next_next = Some((Rc::clone(&base_path), Rc::clone(&watch_config), child_dir_iter))
                             }
                         }
                     }
                     // un-pop
-                    self.sub_iter.push((base_path, watch_config, dir_iter));
+                    self.sub_iter.push((Rc::clone(&base_path), Rc::clone(&watch_config), dir_iter));
                 }
                 if let Some(tuple) = next_next {
                     // directory recursion
@@ -76,7 +77,7 @@ impl<'a> GitRepoIter<'a> {
                             .and_then(|p| fs::read_dir(p).ok());
                         if let Some(dir_iter) = dir_iter_opt {
                             // clone because we're going from more global to less global scope
-                            self.sub_iter.push((path, watch_config.clone(), dir_iter));
+                            self.sub_iter.push((Rc::new(path), Rc::clone(&watch_config), dir_iter));
                         }
                         CallState::Recurse
                     }
