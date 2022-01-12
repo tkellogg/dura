@@ -1,8 +1,9 @@
-use std::collections::HashMap;
-use std::fs::{create_dir_all, File, OpenOptions};
+use std::collections::BTreeMap;
+use std::fs::{create_dir_all, File};
+use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
-use std::{env, io};
 use std::rc::Rc;
+use std::{env, fs};
 
 use serde::{Deserialize, Serialize};
 
@@ -35,37 +36,35 @@ impl Default for WatchConfig {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Config {
-    pub pid: Option<u32>,
-    pub repos: HashMap<String, Rc<WatchConfig>>,
+    pub repos: BTreeMap<String, Rc<WatchConfig>>,
 }
 
 impl Config {
     pub fn empty() -> Self {
         Self {
-            pid: None,
-            repos: HashMap::new(),
+            repos: BTreeMap::new(),
         }
     }
 
     pub fn default_path() -> PathBuf {
-        Self::get_dura_home().join("config.json")
+        Self::get_dura_config_home().join("config.toml")
     }
 
     /// Location of all config & database files. By default this is ~/.config/dura but can be
-    /// overridden by setting DURA_HOME environment variable.
-    fn get_dura_home() -> PathBuf {
+    /// overridden by setting DURA_CONFIG_HOME environment variable.
+    fn get_dura_config_home() -> PathBuf {
         // The environment variable lets us run tests independently, but I'm sure someone will come
         // up with another reason to use it.
-        if let Ok(env_var) = env::var("DURA_HOME") {
+        if let Ok(env_var) = env::var("DURA_CONFIG_HOME") {
             if !env_var.is_empty() {
                 return env_var.into();
             }
         }
 
-        home::home_dir()
-        .expect("Could not find your home directory. The default is ~/.config/dura but it can also \
-                be controlled by setting the DURA_HOME environment variable.")
-        .join(".config/dura")
+        dirs::config_dir()
+            .expect("Could not find your config directory. The default is ~/.config/dura but it can also \
+                be controlled by setting the DURA_CONFIG_HOME environment variable.")
+            .join("dura")
     }
 
     /// Load Config from default path
@@ -74,12 +73,16 @@ impl Config {
     }
 
     pub fn load_file(path: &Path) -> Result<Self> {
-        let reader = io::BufReader::new(File::open(path)?);
-        let res = serde_json::from_reader(reader)?;
+        let mut reader = BufReader::new(File::open(path)?);
+
+        let mut buffer = Vec::new();
+        reader.read_to_end(&mut buffer)?;
+
+        let res = toml::from_slice(buffer.as_slice())?;
         Ok(res)
     }
 
-    /// Save config to disk in ~/.config/dura/config.json
+    /// Save config to disk in ~/.config/dura/config.toml
     pub fn save(&self) {
         self.save_to_path(Self::default_path().as_path())
     }
@@ -92,30 +95,28 @@ impl Config {
     pub fn save_to_path(&self, path: &Path) {
         Self::create_dir(path);
 
-        let file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(path)
-            .unwrap();
-
-        let writer = io::BufWriter::new(file);
-        serde_json::to_writer(writer, self).unwrap();
+        fs::write(path, toml::to_string(self).unwrap()).unwrap();
     }
 
     pub fn set_watch(&mut self, path: String, cfg: WatchConfig) {
-        if self.repos.contains_key(&path) {
-            println!("{} is already being watched", path)
+        let abs_path = fs::canonicalize(path).expect("The provided path is not a directory");
+        let abs_path = abs_path.to_str().unwrap();
+
+        if self.repos.contains_key(abs_path) {
+            println!("{} is already being watched", abs_path)
         } else {
-            self.repos.insert(path.clone(), Rc::new(cfg));
-            println!("Started watching {}", path)
+            self.repos.insert(abs_path.to_string(), Rc::new(cfg));
+            println!("Started watching {}", abs_path)
         }
     }
 
     pub fn set_unwatch(&mut self, path: String) {
-        match self.repos.remove(&path) {
-            Some(_) => println!("Stopped watching {}", path),
-            None => println!("{} is not being watched", path),
+        let abs_path = fs::canonicalize(path).expect("The provided path is not a directory");
+        let abs_path = abs_path.to_str().unwrap().to_string();
+
+        match self.repos.remove(&abs_path) {
+            Some(_) => println!("Stopped watching {}", abs_path),
+            None => println!("{} is not being watched", abs_path),
         }
     }
 

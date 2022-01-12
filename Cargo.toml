@@ -8,11 +8,12 @@ edition = "2021"
 [dependencies]
 clap = "3.0.5"
 git2 = "0.13"
-home = "0.5.3"
+dirs = "4.0.0"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 chrono = "0.4"
+toml = "0.5.8"
 tracing = { version = "0.1.5"}
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
 

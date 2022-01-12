@@ -3,8 +3,10 @@ use std::{
     process::{Child, Command},
     thread, time,
 };
+use std::collections::HashSet;
 
 use dura::config::Config;
+use dura::database::RuntimeLock;
 
 /// Utility to start dura asynchronously (e.g. dura serve) and kill the process when this goes out
 /// of scope. This helps us do end-to-end tests where we invoke the executable, possibly multiple
@@ -12,7 +14,8 @@ use dura::config::Config;
 pub struct Dura {
     primary: Option<Child>,
     secondary: Option<Child>,
-    home_dir: tempfile::TempDir,
+    config_dir: tempfile::TempDir,
+    cache_dir: tempfile::TempDir,
 }
 
 impl Dura {
@@ -20,7 +23,8 @@ impl Dura {
         Self {
             primary: None,
             secondary: None,
-            home_dir: tempfile::tempdir().unwrap(),
+            config_dir: tempfile::tempdir().unwrap(),
+            cache_dir: tempfile::tempdir().unwrap(),
         }
     }
 
@@ -29,7 +33,8 @@ impl Dura {
         let exe = env!("CARGO_BIN_EXE_dura").to_string();
         let child = Command::new(exe)
             .args(args)
-            .env("DURA_HOME", self.home_dir.path())
+            .env("DURA_CONFIG_HOME", self.config_dir.path())
+            .env("DURA_CACHE_HOME", self.cache_dir.path())
             .spawn()
             .unwrap();
 
@@ -45,7 +50,8 @@ impl Dura {
         let exe = env!("CARGO_BIN_EXE_dura").to_string();
         let child_proc = Command::new(exe)
             .args(args)
-            .env("DURA_HOME", self.home_dir.path())
+            .env("DURA_CONFIG_HOME", self.config_dir.path())
+            .env("DURA_CACHE_HOME", self.cache_dir.path())
             .output();
 
         if let Ok(output) = child_proc {
@@ -69,7 +75,8 @@ impl Dura {
         let exe = env!("CARGO_BIN_EXE_dura").to_string();
         let child_proc = Command::new(exe)
             .args(args)
-            .env("DURA_HOME", self.home_dir.path())
+            .env("DURA_CONFIG_HOME", self.config_dir.path())
+            .env("DURA_CACHE_HOME", self.cache_dir.path())
             .current_dir(dir)
             .output();
 
@@ -99,11 +106,11 @@ impl Dura {
     }
 
     pub fn config_path(&self) -> path::PathBuf {
-        self.home_dir.path().join("config.json")
+        self.config_dir.path().join("config.toml")
     }
 
     pub fn get_config(&self) -> Option<Config> {
-        println!("$ cat ~/.config/dura/config.json");
+        println!("$ cat ~/.config/dura/config.toml");
         let cfg = Config::load_file(self.config_path().as_path()).ok();
         println!("{:?}", cfg);
         cfg
@@ -113,10 +120,25 @@ impl Dura {
         cfg.save_to_path(self.config_path().as_path());
     }
 
-    pub fn git_repos(&self) -> Vec<path::PathBuf> {
+    pub fn runtime_lock_path(&self) -> path::PathBuf {
+        self.cache_dir.path().join("runtime.db")
+    }
+
+    pub fn get_runtime_lock(&self) -> Option<RuntimeLock> {
+        println!("$ cat ~/.cache/dura/runtime.db");
+        let cfg = RuntimeLock::load_file(self.runtime_lock_path().as_path()).ok();
+        println!("{:?}", cfg);
+        cfg
+    }
+
+    pub fn save_runtime_lock(&self, cfg: &RuntimeLock) {
+        cfg.save_to_path(self.config_path().as_path());
+    }
+
+    pub fn git_repos(&self) -> HashSet<path::PathBuf> {
         match self.get_config() {
             Some(cfg) => cfg.git_repos().collect(),
-            None => vec![],
+            None => HashSet::new(),
         }
     }
 
