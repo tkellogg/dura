@@ -1,7 +1,7 @@
-use std::fs::{create_dir_all, File, OpenOptions};
-use std::io::{Result};
+use std::fs::{create_dir_all, File};
+use std::io::Result;
 use std::path::{Path, PathBuf};
-use std::{env, io};
+use std::{env, fs, io};
 
 use serde::{Deserialize, Serialize};
 
@@ -59,15 +59,6 @@ impl RuntimeLock {
     /// Used by tests to save to a temp dir
     pub fn save_to_path(&self, path: &Path) {
         Self::create_dir(path);
-
-        let file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(path)
-            .unwrap();
-
-        let writer = io::BufWriter::new(file);
-        serde_json::to_writer(writer, self).unwrap();
+        fs::write(path, serde_json::to_string(self).unwrap()).unwrap()
     }
 }
