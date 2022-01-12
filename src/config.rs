@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use std::fs::{create_dir_all, File};
-use std::path::{Path, PathBuf};
-use std::{env, fs};
 use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::{env, fs};
 
 use serde::{Deserialize, Serialize};
 
@@ -99,18 +99,24 @@ impl Config {
     }
 
     pub fn set_watch(&mut self, path: String, cfg: WatchConfig) {
-        if self.repos.contains_key(&path) {
-            println!("{} is already being watched", path)
+        let abs_path = fs::canonicalize(path).expect("The provided path is not a directory");
+        let abs_path = abs_path.to_str().unwrap();
+
+        if self.repos.contains_key(abs_path) {
+            println!("{} is already being watched", abs_path)
         } else {
-            self.repos.insert(path.clone(), Rc::new(cfg));
-            println!("Started watching {}", path)
+            self.repos.insert(abs_path.to_string(), Rc::new(cfg));
+            println!("Started watching {}", abs_path)
         }
     }
 
     pub fn set_unwatch(&mut self, path: String) {
-        match self.repos.remove(&path) {
-            Some(_) => println!("Stopped watching {}", path),
-            None => println!("{} is not being watched", path),
+        let abs_path = fs::canonicalize(path).expect("The provided path is not a directory");
+        let abs_path = abs_path.to_str().unwrap().to_string();
+
+        match self.repos.remove(&abs_path) {
+            Some(_) => println!("Stopped watching {}", abs_path),
+            None => println!("{} is not being watched", abs_path),
         }
     }
 
