@@ -6,7 +6,7 @@ use tokio::time;
 use tracing::{error, info};
 
 use crate::config::Config;
-use crate::database::RuntimeDatabase;
+use crate::database::RuntimeLock;
 use crate::log::Operation;
 use crate::snapshots;
 
@@ -45,11 +45,11 @@ fn process_directory(current_path: &Path) {
 
 #[tracing::instrument]
 fn do_task() {
-    let runtime_db = RuntimeDatabase::load();
-    if runtime_db.pid != Some(process::id()) {
+    let runtime_lock = RuntimeLock::load();
+    if runtime_lock.pid != Some(process::id()) {
         error!(
             "Shutting down because other poller took lock: {:?}",
-            runtime_db.pid
+            runtime_lock.pid
         );
         process::exit(1);
     }
@@ -62,9 +62,9 @@ fn do_task() {
 }
 
 pub async fn start() {
-    let mut runtime_db = RuntimeDatabase::load();
-    runtime_db.pid = Some(process::id());
-    runtime_db.save();
+    let mut runtime_lock = RuntimeLock::load();
+    runtime_lock.pid = Some(process::id());
+    runtime_lock.save();
 
     loop {
         time::sleep(time::Duration::from_secs(5)).await;

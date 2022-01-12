@@ -6,7 +6,7 @@ use std::{
 use std::collections::HashSet;
 
 use dura::config::Config;
-use dura::database::RuntimeDatabase;
+use dura::database::RuntimeLock;
 
 /// Utility to start dura asynchronously (e.g. dura serve) and kill the process when this goes out
 /// of scope. This helps us do end-to-end tests where we invoke the executable, possibly multiple
@@ -120,18 +120,18 @@ impl Dura {
         cfg.save_to_path(self.config_path().as_path());
     }
 
-    pub fn runtime_db_path(&self) -> path::PathBuf {
+    pub fn runtime_lock_path(&self) -> path::PathBuf {
         self.cache_dir.path().join("runtime.db")
     }
 
-    pub fn get_runtime_db(&self) -> Option<RuntimeDatabase> {
+    pub fn get_runtime_lock(&self) -> Option<RuntimeLock> {
         println!("$ cat ~/.cache/dura/runtime.db");
-        let cfg = RuntimeDatabase::load_file(self.runtime_db_path().as_path()).ok();
+        let cfg = RuntimeLock::load_file(self.runtime_lock_path().as_path()).ok();
         println!("{:?}", cfg);
         cfg
     }
 
-    pub fn save_runtime_db(&self, cfg: &RuntimeDatabase) {
+    pub fn save_runtime_lock(&self, cfg: &RuntimeLock) {
         cfg.save_to_path(self.config_path().as_path());
     }
 

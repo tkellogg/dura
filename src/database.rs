@@ -6,11 +6,11 @@ use std::{env, io};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct RuntimeDatabase {
+pub struct RuntimeLock {
     pub pid: Option<u32>,
 }
 
-impl RuntimeDatabase {
+impl RuntimeLock {
     pub fn empty() -> Self {
         Self { pid: None }
     }

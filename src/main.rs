@@ -9,7 +9,7 @@ use dura::snapshots;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
-use dura::database::RuntimeDatabase;
+use dura::database::RuntimeLock;
 
 #[tokio::main]
 async fn main() {
@@ -182,7 +182,7 @@ fn unwatch_dir(path: &std::path::Path) {
 /// function does not actually kill a poller but instead indicates
 /// that any living poller should exit during their next check.
 fn kill() {
-    let mut runtime_db = RuntimeDatabase::load();
-    runtime_db.pid = None;
-    runtime_db.save();
+    let mut runtime_lock = RuntimeLock::load();
+    runtime_lock.pid = None;
+    runtime_lock.save();
 }
