@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::{PathBuf, Path};
-use std::collections::hash_map;
+use std::collections::{btree_map};
 use std::rc::Rc;
 
 use crate::config::{Config, WatchConfig};
@@ -26,7 +26,7 @@ enum CallState {
 ///  2. Empty iterator: If we get to the end of a sub-iterator, pop & start from the top
 ///
 pub struct GitRepoIter<'a> {
-    config_iter: hash_map::Iter<'a, String, Rc<WatchConfig>>,
+    config_iter: btree_map::Iter<'a, String, Rc<WatchConfig>>,
     /// A stack, because we can't use recursion with an iterator (at least not between elements)
     sub_iter: Vec<(Rc<PathBuf>, Rc<WatchConfig>, fs::ReadDir)>,
 }
@@ -38,7 +38,7 @@ impl<'a> GitRepoIter<'a> {
 
     fn get_next(&mut self) -> CallState {
         // pop
-        // 
+        //
         // Use pop here to manage the lifetime of the iterator. If we used last/peek, we would
         // borrow a shared reference, which precludes us from borrowing as mutable when we want to
         // use the iterator. But that means we have to return it to the vec.

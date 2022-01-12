@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 use std::{env, fs};
@@ -36,13 +36,13 @@ impl Default for WatchConfig {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Config {
-    pub repos: HashMap<String, Rc<WatchConfig>>,
+    pub repos: BTreeMap<String, Rc<WatchConfig>>,
 }
 
 impl Config {
     pub fn empty() -> Self {
         Self {
-            repos: HashMap::new(),
+            repos: BTreeMap::new(),
         }
     }
 
