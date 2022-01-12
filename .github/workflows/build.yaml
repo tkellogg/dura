@@ -1,6 +1,6 @@
 name: Build
 
-on: [workflow_dispatch, push, pull_request]
+on: [workflow_call, workflow_dispatch, push, pull_request]
 
 jobs:
     build-linux:
