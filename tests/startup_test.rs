@@ -9,7 +9,6 @@ fn start_serve() {
     let mut dura = util::dura::Dura::new();
     assert_eq!(None, dura.pid(true));
     assert_eq!(None, dura.get_runtime_lock());
-    assert_eq!(None, dura.get_runtime_lock());
 
     dura.start_async(&["serve"], true);
     dura.wait();
