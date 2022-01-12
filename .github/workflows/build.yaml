@@ -1,6 +1,6 @@
 name: Build
 
-on: [workflow_dispatch, push, pull_request]
+on: [workflow_call, workflow_dispatch, push, pull_request]
 
 jobs:
     build-linux:
@@ -34,7 +34,7 @@ jobs:
             - name: Upload Binary
               uses: actions/upload-artifact@v2
               with:
-                  name: dura-linux-x86_64
+                  name: dura-linux-x86_64_${{ github.sha }}
                   path: ${{ github.workspace }}/target/release/dura
 
     build-macos:
@@ -68,7 +68,7 @@ jobs:
             - name: Upload Binary
               uses: actions/upload-artifact@v2
               with:
-                  name: dura-macos-x86_64
+                  name: dura-macos-x86_64_${{ github.sha }}
                   path: ${{ github.workspace }}/target/release/dura
 
     build-windows:
@@ -102,5 +102,5 @@ jobs:
             - name: Upload Binary
               uses: actions/upload-artifact@v2
               with:
-                  name: dura-windows-x86_64
+                  name: dura-windows-x86_64_${{ github.sha }}
                   path: ${{ github.workspace }}\target\release\dura.exe
