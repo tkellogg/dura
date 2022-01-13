@@ -36,17 +36,23 @@ impl Default for WatchConfig {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Config {
-    pub repos: BTreeMap<String, Rc<WatchConfig>>,
+    // When commit_exclude_git_config is true,
+    // never use any git configuration to sign dura's commits.
+    // Defaults to false
+    #[serde(default)]
+    pub commit_exclude_git_config: bool,
     pub commit_author: Option<String>,
     pub commit_email: Option<String>,
+    pub repos: BTreeMap<String, Rc<WatchConfig>>,
 }
 
 impl Config {
     pub fn empty() -> Self {
         Self {
-            repos: BTreeMap::new(),
+            commit_exclude_git_config: false,
             commit_author: None,
             commit_email: None,
+            repos: BTreeMap::new(),
         }
     }
 
@@ -99,7 +105,10 @@ impl Config {
     pub fn save_to_path(&self, path: &Path) {
         Self::create_dir(path);
 
-        fs::write(path, toml::to_string(self).unwrap()).unwrap();
+        match fs::write(path, toml::to_string(self).unwrap()) {
+            Ok(_) => (),
+            Err(e) => println!("Unable to initialize dura config file: {}", e),
+        }
     }
 
     pub fn set_watch(&mut self, path: String, cfg: WatchConfig) {

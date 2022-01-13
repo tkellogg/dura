@@ -86,9 +86,11 @@ fn get_git_author(repo: &Repository) -> String {
         return value;
     }
 
-    if let Ok(git_cfg) = repo.config() {
-        if let Ok(value) = git_cfg.get_string("user.name") {
-            return value;
+    if !dura_cfg.commit_exclude_git_config {
+        if let Ok(git_cfg) = repo.config() {
+            if let Ok(value) = git_cfg.get_string("user.name") {
+                return value;
+            }
         }
     }
 
@@ -101,9 +103,11 @@ fn get_git_email(repo: &Repository) -> String {
         return value;
     }
 
-    if let Ok(git_cfg) = repo.config() {
-        if let Ok(value) = git_cfg.get_string("user.email") {
-            return value;
+    if !dura_cfg.commit_exclude_git_config {
+        if let Ok(git_cfg) = repo.config() {
+            if let Ok(value) = git_cfg.get_string("user.email") {
+                return value;
+            }
         }
     }
 
