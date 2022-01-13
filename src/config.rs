@@ -37,12 +37,16 @@ impl Default for WatchConfig {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Config {
     pub repos: BTreeMap<String, Rc<WatchConfig>>,
+    pub commit_author: Option<String>,
+    pub commit_email: Option<String>,
 }
 
 impl Config {
     pub fn empty() -> Self {
         Self {
             repos: BTreeMap::new(),
+            commit_author: None,
+            commit_email: None,
         }
     }
 
