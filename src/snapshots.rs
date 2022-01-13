@@ -1,7 +1,7 @@
+use git2::{BranchType, Commit, DiffOptions, Error, IndexAddOption, Repository, Signature};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::Path;
-use git2::{Repository, Error, IndexAddOption, Commit, BranchType, DiffOptions, Signature};
-use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 
@@ -14,7 +14,11 @@ pub struct CaptureStatus {
 
 impl fmt::Display for CaptureStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "dura: {}, commit_hash: {}, base: {}", self.dura_branch, self.commit_hash, self.base_hash)
+        write!(
+            f,
+            "dura: {}, commit_hash: {}, base: {}",
+            self.dura_branch, self.commit_hash, self.base_hash
+        )
     }
 }
 
@@ -44,12 +48,12 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
     index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
 
     let dirty_diff = repo.diff_tree_to_index(
-        Some(&branch_commit.as_ref().unwrap_or(&head).tree()?), 
-        Some(&index), 
-        Some(DiffOptions::new().include_untracked(true))
+        Some(&branch_commit.as_ref().unwrap_or(&head).tree()?),
+        Some(&index),
+        Some(DiffOptions::new().include_untracked(true)),
     )?;
     if dirty_diff.deltas().len() == 0 {
-        return Ok(None)
+        return Ok(None);
     }
 
     let tree_oid = index.write_tree()?;
@@ -62,7 +66,7 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
         &committer,
         message,
         &tree,
-        &[ branch_commit.as_ref().unwrap_or(&head) ],
+        &[branch_commit.as_ref().unwrap_or(&head)],
     )?;
 
     Ok(Some(CaptureStatus {

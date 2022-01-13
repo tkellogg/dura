@@ -3,13 +3,13 @@ use std::path::Path;
 
 use clap::{arg, App, AppSettings, Arg, Values};
 use dura::config::{Config, WatchConfig};
+use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
 use dura::poller;
 use dura::snapshots;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
-use dura::database::RuntimeLock;
 
 #[tokio::main]
 async fn main() {

@@ -1,9 +1,9 @@
+use std::collections::HashSet;
 use std::{
     ops, path,
     process::{Child, Command},
     thread, time,
 };
-use std::collections::HashSet;
 
 use dura::config::Config;
 use dura::database::RuntimeLock;
@@ -95,7 +95,6 @@ impl Dura {
             }
         }
     }
-
 
     pub fn pid(&self, is_primary: bool) -> Option<u32> {
         if is_primary {
