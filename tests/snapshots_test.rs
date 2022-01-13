@@ -1,6 +1,11 @@
-use dura::snapshots;
+use dura::{ snapshots, config::Config };
+
+use std::env;
 
 mod util;
+
+#[macro_use]
+extern crate serial_test;
 
 #[test]
 fn change_single_file() {
@@ -14,6 +19,7 @@ fn change_single_file() {
     let status = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
 
     assert_ne!(status.commit_hash, status.base_hash);
+    assert_eq!(status.dura_branch, format!("dura/{}", status.base_hash));
     assert_eq!(status.dura_branch, format!("dura/{}", status.base_hash));
 }
 
@@ -64,4 +70,84 @@ fn during_merge_conflicts() {
     // Regular dura commit
     assert_ne!(status.commit_hash, status.base_hash);
     assert_eq!(status.dura_branch, format!("dura/{}", status.base_hash));
+}
+
+#[test]
+#[serial]
+fn test_commit_signature_using_dura_config() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
+    repo.init();
+    repo.set_config("user.name", "git-author");
+    repo.set_config("user.email", "git@someemail.com");
+
+    env::set_var("DURA_CONFIG_HOME", tmp.path().to_path_buf());
+    let mut dura_config = Config::empty(); 
+    dura_config.commit_author = Some("dura-config".to_string());
+    dura_config.commit_email = Some("dura-config@email.com".to_string());
+    dura_config.save();
+
+    repo.write_file("foo.txt");
+    repo.commit_all();
+
+    repo.change_file("foo.txt");
+    let status = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
+
+    let commit_author = repo.git(&["show", "-s", "--format=format:%an", &status.commit_hash]);
+    assert_eq!(commit_author, dura_config.commit_author); 
+
+    let commit_email = repo.git(&["show", "-s", "--format=format:%ae", &status.commit_hash]);
+    assert_eq!(commit_email, dura_config.commit_email);
+}
+
+#[test]
+#[serial]
+fn test_commit_signature_using_git_config() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
+    repo.init();
+    repo.set_config("user.name", "git-author");
+    repo.set_config("user.email", "git@someemail.com");
+
+    env::set_var("DURA_CONFIG_HOME", tmp.path().to_path_buf());
+    let mut dura_config = Config::empty(); 
+    dura_config.save();
+
+    repo.write_file("foo.txt");
+    repo.commit_all();
+
+    repo.change_file("foo.txt");
+    let status = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
+
+    let commit_author = repo.git(&["show", "-s", "--format=format:%an", &status.commit_hash]).unwrap();
+    assert_eq!(commit_author, "git-author"); 
+
+    let commit_email = repo.git(&["show", "-s", "--format=format:%ae", &status.commit_hash]).unwrap();
+    assert_eq!(commit_email, "git@someemail.com"); 
+}
+
+#[test]
+#[serial]
+fn test_commit_signature_exclude_git_config() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
+    repo.init();
+    repo.set_config("user.name", "git-author");
+    repo.set_config("user.email", "git@someemail.com");
+
+    env::set_var("DURA_CONFIG_HOME", tmp.path().to_path_buf());
+    let mut dura_config = Config::empty(); 
+    dura_config.commit_exclude_git_config = true;
+    dura_config.save();
+
+    repo.write_file("foo.txt");
+    repo.commit_all();
+    repo.change_file("foo.txt");
+    let status = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
+
+    let commit_author = repo.git(&["show", "-s", "--format=format:%an", &status.commit_hash]).unwrap();
+    assert_eq!(commit_author, "dura"); 
+
+    let commit_email = repo.git(&["show", "-s", "--format=format:%ae", &status.commit_hash]).unwrap();
+    assert_eq!(commit_email, "dura@github.io"); 
 }

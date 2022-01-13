@@ -19,3 +19,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
 
 [dev-dependencies]
 tempfile = "3.2.0"
+serial_test = "0.5.1"
