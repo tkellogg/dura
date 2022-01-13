@@ -1,6 +1,6 @@
+use std::collections::btree_map;
 use std::fs;
-use std::path::{PathBuf, Path};
-use std::collections::{btree_map};
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use crate::config::{Config, WatchConfig};
@@ -13,7 +13,7 @@ use crate::snapshots;
 enum CallState {
     Yield(PathBuf),
     Recurse,
-    Done
+    Done,
 }
 
 /// Iterator over all Git repos covered by a config.
@@ -33,7 +33,10 @@ pub struct GitRepoIter<'a> {
 
 impl<'a> GitRepoIter<'a> {
     pub fn new(config: &'a Config) -> Self {
-        Self { config_iter: config.repos.iter(), sub_iter: Vec::new() }
+        Self {
+            config_iter: config.repos.iter(),
+            sub_iter: Vec::new(),
+        }
     }
 
     fn get_next(&mut self) -> CallState {
@@ -49,18 +52,24 @@ impl<'a> GitRepoIter<'a> {
                 let max_depth: usize = watch_config.max_depth.into();
                 if let Some(Ok(entry)) = dir_iter.next() {
                     let child_path = entry.path();
-                    if is_valid_directory(base_path.as_path(), child_path.as_path(), &watch_config) {
+                    if is_valid_directory(base_path.as_path(), child_path.as_path(), &watch_config)
+                    {
                         dbg!(child_path.as_path());
                         if snapshots::is_repo(child_path.as_path()) {
                             ret_val = CallState::Yield(child_path);
                         } else if self.sub_iter.len() < max_depth {
                             if let Ok(child_dir_iter) = fs::read_dir(child_path.as_path()) {
-                                next_next = Some((Rc::clone(&base_path), Rc::clone(&watch_config), child_dir_iter))
+                                next_next = Some((
+                                    Rc::clone(&base_path),
+                                    Rc::clone(&watch_config),
+                                    child_dir_iter,
+                                ))
                             }
                         }
                     }
                     // un-pop
-                    self.sub_iter.push((Rc::clone(&base_path), Rc::clone(&watch_config), dir_iter));
+                    self.sub_iter
+                        .push((Rc::clone(&base_path), Rc::clone(&watch_config), dir_iter));
                 }
                 if let Some(tuple) = next_next {
                     // directory recursion
@@ -73,16 +82,16 @@ impl<'a> GitRepoIter<'a> {
                 match self.config_iter.next() {
                     Some((base_path, watch_config)) => {
                         let path = PathBuf::from(base_path);
-                        let dir_iter_opt = path.parent()
-                            .and_then(|p| fs::read_dir(p).ok());
+                        let dir_iter_opt = path.parent().and_then(|p| fs::read_dir(p).ok());
                         if let Some(dir_iter) = dir_iter_opt {
                             // clone because we're going from more global to less global scope
-                            self.sub_iter.push((Rc::new(path), Rc::clone(&watch_config), dir_iter));
+                            self.sub_iter
+                                .push((Rc::new(path), Rc::clone(&watch_config), dir_iter));
                         }
                         CallState::Recurse
                     }
                     // The end. The real end. This is it.
-                    None => CallState::Done
+                    None => CallState::Done,
                 }
             }
         }
@@ -134,4 +143,3 @@ fn is_valid_directory(base_path: &Path, child_path: &Path, value: &WatchConfig) 
 
     include
 }
-

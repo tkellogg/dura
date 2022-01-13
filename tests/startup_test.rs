@@ -1,8 +1,8 @@
 mod util;
 
 use dura::config::Config;
-use std::fs;
 use dura::database::RuntimeLock;
+use std::fs;
 
 #[test]
 fn start_serve() {
@@ -64,11 +64,7 @@ fn start_serve_with_invalid_json() {
     let mut dura = util::dura::Dura::new();
     let runtime_lock_path = dura.runtime_lock_path();
     Config::create_dir(runtime_lock_path.as_path());
-    fs::write(
-        runtime_lock_path,
-        "{\"pid\":34725",
-    )
-    .unwrap();
+    fs::write(runtime_lock_path, "{\"pid\":34725").unwrap();
 
     assert_eq!(None, dura.pid(true));
     assert_eq!(None, dura.get_runtime_lock());
@@ -81,4 +77,3 @@ fn start_serve_with_invalid_json() {
     assert_ne!(None, runtime_lock);
     assert_eq!(dura.pid(true), runtime_lock.unwrap().pid);
 }
-

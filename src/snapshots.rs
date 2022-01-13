@@ -1,7 +1,9 @@
+use git2::{BranchType, Commit, DiffOptions, Error, IndexAddOption, Repository, Signature};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::Path;
-use git2::{Repository, Error, IndexAddOption, Commit, BranchType, DiffOptions};
-use serde::{Deserialize, Serialize};
+
+use crate::config::Config;
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct CaptureStatus {
@@ -12,7 +14,11 @@ pub struct CaptureStatus {
 
 impl fmt::Display for CaptureStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "dura: {}, commit_hash: {}, base: {}", self.dura_branch, self.commit_hash, self.base_hash)
+        write!(
+            f,
+            "dura: {}, commit_hash: {}, base: {}",
+            self.dura_branch, self.commit_hash, self.base_hash
+        )
     }
 }
 
@@ -42,24 +48,25 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
     index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
 
     let dirty_diff = repo.diff_tree_to_index(
-        Some(&branch_commit.as_ref().unwrap_or(&head).tree()?), 
-        Some(&index), 
-        Some(DiffOptions::new().include_untracked(true))
+        Some(&branch_commit.as_ref().unwrap_or(&head).tree()?),
+        Some(&index),
+        Some(DiffOptions::new().include_untracked(true)),
     )?;
     if dirty_diff.deltas().len() == 0 {
-        return Ok(None)
+        return Ok(None);
     }
 
     let tree_oid = index.write_tree()?;
     let tree = repo.find_tree(tree_oid)?;
 
+    let committer = Signature::now(&get_git_author(&repo), &get_git_email(&repo))?;
     let oid = repo.commit(
         Some(format!("refs/heads/{}", branch_name.as_str()).as_str()),
-        &head.author(), 
-        &head.committer(),
+        &committer,
+        &committer,
         message,
         &tree,
-        &[ branch_commit.as_ref().unwrap_or(&head) ],
+        &[branch_commit.as_ref().unwrap_or(&head)],
     )?;
 
     Ok(Some(CaptureStatus {
@@ -77,3 +84,36 @@ fn find_head<'repo>(repo: &'repo Repository, branch_name: &str) -> Option<Commit
     }
 }
 
+fn get_git_author(repo: &Repository) -> String {
+    let dura_cfg = Config::load();
+    if let Some(value) = dura_cfg.commit_author {
+        return value;
+    }
+
+    if !dura_cfg.commit_exclude_git_config {
+        if let Ok(git_cfg) = repo.config() {
+            if let Ok(value) = git_cfg.get_string("user.name") {
+                return value;
+            }
+        }
+    }
+
+    "dura".to_string()
+}
+
+fn get_git_email(repo: &Repository) -> String {
+    let dura_cfg = Config::load();
+    if let Some(value) = dura_cfg.commit_email {
+        return value;
+    }
+
+    if !dura_cfg.commit_exclude_git_config {
+        if let Ok(git_cfg) = repo.config() {
+            if let Ok(value) = git_cfg.get_string("user.email") {
+                return value;
+            }
+        }
+    }
+
+    "dura@github.io".to_string()
+}

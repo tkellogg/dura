@@ -1,8 +1,8 @@
 mod util;
 
-use std::collections::HashSet;
 use crate::util::dura::Dura;
 use crate::util::git_repo::GitRepo;
+use std::collections::HashSet;
 
 #[test]
 fn watch_repo() {
@@ -51,4 +51,3 @@ fn watch_dir_with_repo_nested_3_folders_deep() {
 
     assert_eq!(dura.git_repos(), tmp_set);
 }
-

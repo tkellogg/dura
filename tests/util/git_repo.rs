@@ -79,4 +79,8 @@ impl GitRepo {
         let path_obj = self.dir.as_path().join(path);
         fs::write(path_obj, content).unwrap();
     }
+
+    pub fn set_config(&self, name: &str, value: &str) {
+        self.git(&["config", name, value]);
+    }
 }
