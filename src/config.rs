@@ -105,7 +105,15 @@ impl Config {
     pub fn save_to_path(&self, path: &Path) {
         Self::create_dir(path);
 
-        match fs::write(path, toml::to_string(self).unwrap()) {
+        let config_string = match toml::to_string(self) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Unexpected error when deserializing config: {}", e);
+                return;
+            },
+        };
+
+        match fs::write(path, config_string) {
             Ok(_) => (),
             Err(e) => println!("Unable to initialize dura config file: {}", e),
         }

@@ -54,7 +54,6 @@ impl<'a> GitRepoIter<'a> {
                     let child_path = entry.path();
                     if is_valid_directory(base_path.as_path(), child_path.as_path(), &watch_config)
                     {
-                        dbg!(child_path.as_path());
                         if snapshots::is_repo(child_path.as_path()) {
                             ret_val = CallState::Yield(child_path);
                         } else if self.sub_iter.len() < max_depth {
