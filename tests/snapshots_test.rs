@@ -110,7 +110,7 @@ fn test_commit_signature_using_git_config() {
     repo.set_config("user.email", "git@someemail.com");
 
     env::set_var("DURA_CONFIG_HOME", tmp.path().to_path_buf());
-    let mut dura_config = Config::empty();
+    let dura_config = Config::empty();
     dura_config.save();
 
     repo.write_file("foo.txt");
