@@ -148,6 +148,7 @@ async fn main() {
                 include,
                 exclude,
                 max_depth,
+                rebalance_strategy: None,
             };
 
             watch_dir(dir, watch_config);

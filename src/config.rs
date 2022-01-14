@@ -12,10 +12,30 @@ use crate::git_repo_iter::GitRepoIter;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub enum RebalanceConfig {
+    BranchTree {
+        num_parents: Option<u8>,
+    }
+}
+
+impl RebalanceConfig {
+    pub fn or(&self, lower_precedence: &Self) -> Self {
+        match (self, lower_precedence) {
+            (Self::BranchTree {num_parents: a}, Self::BranchTree {num_parents: b}) => {
+                Self::BranchTree { 
+                    num_parents: a.or(b.clone()),
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct WatchConfig {
     pub include: Vec<String>,
     pub exclude: Vec<String>,
     pub max_depth: u8,
+    pub rebalance_strategy: Option<RebalanceConfig>,
 }
 
 impl WatchConfig {
@@ -24,6 +44,7 @@ impl WatchConfig {
             include: vec![],
             exclude: vec![],
             max_depth: 255,
+            rebalance_strategy: None,
         }
     }
 }
