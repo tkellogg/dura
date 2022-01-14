@@ -13,7 +13,9 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum RebalanceConfig {
-    BranchTree {
+    /// Aggregate dura branches into fewer branches. Combine num_parents branches into a single
+    /// branch.
+    FlatAgg {
         num_parents: Option<u8>,
     }
 }
@@ -21,8 +23,8 @@ pub enum RebalanceConfig {
 impl RebalanceConfig {
     pub fn or(&self, lower_precedence: &Self) -> Self {
         match (self, lower_precedence) {
-            (Self::BranchTree {num_parents: a}, Self::BranchTree {num_parents: b}) => {
-                Self::BranchTree { 
+            (Self::FlatAgg {num_parents: a}, Self::FlatAgg {num_parents: b}) => {
+                Self::FlatAgg { 
                     num_parents: a.or(b.clone()),
                 }
             }

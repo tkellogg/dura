@@ -1,14 +1,14 @@
 use std::path::Path;
-use git2::{Error, Repository, BranchType, Branch, Time, Commit};
+use git2::{Error, Repository, BranchType, Branch, Time, Commit, Oid};
 
 use crate::config::RebalanceConfig;
 
 /// Create or rebalance the octo-tree cold history.
-pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<(), Error> {
+pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<Vec<Oid>, Error> {
     let repo = Repository::open(repo_path)?;
     let hash_branches = get_hash_branches(&repo)?;
     match config {
-        RebalanceConfig::BranchTree{ num_parents } => {
+        RebalanceConfig::FlatAgg{ num_parents } => {
             let parent_commits: Vec<_> = hash_branches.iter()
                 .flat_map(|branch| branch.get().peel_to_commit().ok())
                 .collect();
@@ -16,10 +16,9 @@ pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<(), Error
                 .map(|commit| commit)
                 .collect();
 
-            build_tree(&repo, &parents[..], num_parents.unwrap_or(8))?;
+            Ok(build_tree(&repo, &parents[..], num_parents.unwrap_or(8))?)
         }
     }
-    Ok(())
 }
 
 fn get_hash_branches(repo: &Repository) -> Result<Vec<Branch>, Error> {
@@ -53,10 +52,14 @@ fn sort_desc<'repo>(branches: &mut Vec<Branch<'repo>>) {
     });
 }
 
-fn build_tree<'a>(repo: &'a Repository, parent_commits: &[&'a Commit], num_parents: u8) -> Result<Vec<Commit<'a>>, Error> {
-    let mut ret: Vec<Commit> = Vec::new();
+fn build_tree<'a>(repo: &'a Repository, parent_commits: &[&'a Commit], num_parents: u8) -> Result<Vec<Oid>, Error> {
+    let mut ret: Vec<Oid> = Vec::new();
 
-    let num_pages = (parent_commits.len() / (num_parents as usize)) + 1;
+    let mut num_pages = parent_commits.len() / (num_parents as usize);
+    if (parent_commits.len() % (num_parents as usize)) != 0 {
+        // when pages aren't perfectly aligned, add an extra page
+        num_pages += 1;
+    }
 
     for page in 0..num_pages {
         let parents = &parent_commits[(page*(num_parents as usize))..((page+1)*(num_parents as usize))];
@@ -75,7 +78,7 @@ fn build_tree<'a>(repo: &'a Repository, parent_commits: &[&'a Commit], num_paren
             &parents[..],
         )?;
 
-        ret.push(repo.find_commit(oid)?);
+        ret.push(oid);
     }
 
     Ok(ret)

@@ -1,4 +1,5 @@
 use std::{fs, path, process::Command};
+use git2::Repository;
 
 /// A test utility to make our tests more readable
 pub struct GitRepo {
@@ -12,6 +13,10 @@ pub struct GitRepo {
 impl GitRepo {
     pub fn new(dir: path::PathBuf) -> Self {
         Self { dir, counter: 0 }
+    }
+
+    pub fn repo(&self) -> Repository {
+        Repository::open(self.dir.as_path()).unwrap()
     }
 
     pub fn git(&self, args: &[&str]) -> Option<String> {
