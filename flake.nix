@@ -1,5 +1,5 @@
 {
-  description = "Rust development environment";
+  description = "Dura development environment";
 
   inputs = {
     nixpkgs.url      = "github:nixos/nixpkgs/nixos-unstable";
@@ -18,10 +18,11 @@
       with pkgs;
       {
         devShell = mkShell {
+          RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+
           buildInputs = [
             openssl
             pkgconfig
-            rustup
             (rust-bin.stable.latest.default.override { extensions = [ "rust-src" ]; })
           ];
         };
