@@ -61,7 +61,7 @@ fn during_merge_conflicts() {
     // MERGE FAIL
     let merge_result = repo.git(&["merge", "branch1"]);
     assert_eq!(merge_result, None);
-    repo.git(&["status"]); // debug info
+    repo.git(&["status"]).unwrap(); // debug info
 
     // change a file anyway
     repo.change_file("foo.txt");

@@ -55,18 +55,18 @@ impl GitRepo {
 
     pub fn init(&self) {
         fs::create_dir_all(self.dir.as_path()).unwrap();
-        let _ = self.git(&["init"]);
-        let _ = self.git(&["--version"]);
-        let _ = self.git(&["checkout", "-b", "master"]);
+        let _ = self.git(&["init"]).unwrap();
+        let _ = self.git(&["--version"]).unwrap();
+        let _ = self.git(&["checkout", "-b", "master"]).unwrap();
         // Linux & Windows will fail on `git commit` if these aren't set
-        let _ = self.git(&["config", "user.name", "duratest"]);
-        let _ = self.git(&["config", "user.email", "duratest@dura.io"]);
+        let _ = self.git(&["config", "user.name", "duratest"]).unwrap();
+        let _ = self.git(&["config", "user.email", "duratest@dura.io"]).unwrap();
     }
 
     pub fn commit_all(&self) {
-        self.git(&["add", "."]);
-        self.git(&["status"]);
-        self.git(&["commit", "-m", "test"]);
+        self.git(&["add", "."]).unwrap();
+        self.git(&["status"]).unwrap();
+        self.git(&["commit", "-m", "test"]).unwrap();
     }
 
     pub fn write_file(&self, path: &str) {
@@ -86,6 +86,6 @@ impl GitRepo {
     }
 
     pub fn set_config(&self, name: &str, value: &str) {
-        self.git(&["config", name, value]);
+        self.git(&["config", name, value]).unwrap();
     }
 }
