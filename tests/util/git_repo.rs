@@ -58,6 +58,9 @@ impl GitRepo {
         let _ = self.git(&["init"]);
         let _ = self.git(&["--version"]);
         let _ = self.git(&["checkout", "-b", "master"]);
+        // Linux & Windows will fail on `git commit` if these aren't set
+        let _ = self.git(&["config", "user.name", "duratest"]);
+        let _ = self.git(&["config", "user.email", "duratest@dura.io"]);
     }
 
     pub fn commit_all(&self) {

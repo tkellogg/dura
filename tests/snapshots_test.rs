@@ -30,7 +30,6 @@ fn no_changes() {
     repo.init();
     repo.write_file("foo.txt");
     repo.commit_all();
-    repo.git(&["log"]);
 
     let status = snapshots::capture(repo.dir.as_path()).unwrap();
 
