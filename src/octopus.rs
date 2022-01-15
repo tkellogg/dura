@@ -22,7 +22,7 @@ pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<Vec<Oid>,
 }
 
 fn get_hash_branches(repo: &Repository) -> Result<Vec<Branch>, Error> {
-    let mut ret = repo.branches(Some(BranchType::Local))?
+    let mut ret: Vec<_> = repo.branches(Some(BranchType::Local))?
         .flat_map(|res| res.into_iter())
         .map(|tuple| {
             let (branch, _) = tuple;
@@ -34,6 +34,7 @@ fn get_hash_branches(repo: &Repository) -> Result<Vec<Branch>, Error> {
         })
         .collect();
 
+    //dbg!(ret.iter().map(|b| b.get().peel_to_commit().map(|c| c.author().when())).collect::<Vec<_>>());
     sort_desc(&mut ret);
 
     Ok(ret)

@@ -85,8 +85,8 @@ async fn main() {
     match matches.subcommand() {
         Some(("capture", m)) => {
             let dir = Path::new(m.value_of("directory").unwrap());
-            if let Some(oid) = snapshots::capture(dir).unwrap() {
-                println!("{}", oid);
+            if let Some(capture_status) = snapshots::capture(dir).unwrap() {
+                println!("{}", serde_json::to_string(&capture_status).unwrap());
             }
         }
         Some(("serve", arg_matches)) => {

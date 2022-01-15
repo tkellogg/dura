@@ -1,6 +1,7 @@
-use git2::{BranchType, Commit, DiffOptions, Error, IndexAddOption, Repository, Signature};
+use git2::{BranchType, Commit, DiffOptions, Error, IndexAddOption, Repository, Signature, Time};
+use chrono::DateTime;
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{fmt, env};
 use std::path::Path;
 
 use crate::config::Config;
@@ -59,7 +60,19 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
     let tree_oid = index.write_tree()?;
     let tree = repo.find_tree(tree_oid)?;
 
-    let committer = Signature::now(&get_git_author(&repo), &get_git_email(&repo))?;
+    let committer = match env::var("GIT_COMMITTER_DATE") {
+        Err(_) => {
+            Signature::now(&get_git_author(&repo), &get_git_email(&repo))?
+        }
+        Ok(date_str) => {
+            let chrono_time = DateTime::parse_from_rfc3339(date_str.as_str())
+                .or_else(|_| DateTime::parse_from_rfc2822(date_str.as_str()))
+                .unwrap();
+            let offset = chrono_time.timezone().local_minus_utc();
+            let time = Time::new(chrono_time.timestamp(), offset);
+            Signature::new(&get_git_author(&repo), &get_git_email(&repo), &time)?
+        }
+    };
     let oid = repo.commit(
         Some(format!("refs/heads/{}", branch_name.as_str()).as_str()),
         &committer,

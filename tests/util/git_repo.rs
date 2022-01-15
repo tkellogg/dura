@@ -1,5 +1,7 @@
 use std::{fs, path, process::Command};
 use git2::Repository;
+use chrono::prelude::Utc;
+use chrono::Duration;
 
 /// A test utility to make our tests more readable
 pub struct GitRepo {
@@ -69,9 +71,18 @@ impl GitRepo {
     }
 
     pub fn commit_all(&self) {
+        // HACK: Avoid having to sleep during tests by manipulating the commit timestamp such that
+        // commits tend to go forward in time a little faster than reality. Git seems to truncate
+        // milliseconds, so we have to jump by seconds.
+        //
+        // Note: This can leak if you don't change a file with self.change_file(). That one bumps
+        // the counter. We could probably make this method bump also, but that would require a lot
+        // of changes that we don't really need.
+        let timestamp = Utc::now() + Duration::seconds((self.counter * 5).into());
+
         self.git(&["add", "."]).unwrap();
         self.git(&["status"]).unwrap();
-        self.git(&["commit", "-m", "test"]).unwrap();
+        self.git(&["commit", "-m", "test", "--date", format!("{}", timestamp.format("%+")).as_str()]).unwrap();
     }
 
     pub fn write_file(&self, path: &str) {
