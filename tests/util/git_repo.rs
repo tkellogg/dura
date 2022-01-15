@@ -60,13 +60,18 @@ impl GitRepo {
         let _ = self.git(&["checkout", "-b", "master"]).unwrap();
         // Linux & Windows will fail on `git commit` if these aren't set
         let _ = self.git(&["config", "user.name", "duratest"]).unwrap();
-        let _ = self.git(&["config", "user.email", "duratest@dura.io"]).unwrap();
+        let _ = self
+            .git(&["config", "user.email", "duratest@dura.io"])
+            .unwrap();
     }
 
     pub fn commit_all(&self) {
         self.git(&["add", "."]).unwrap();
         self.git(&["status"]).unwrap();
-        self.git(&["commit", "-m", "test"]).unwrap();
+        // We disable gpg signing to avoid interfering with local global
+        // ~/.gitconfig file, if any.
+        self.git(&["commit", "--no-gpg-sign", "-m", "test"])
+            .unwrap();
     }
 
     pub fn write_file(&self, path: &str) {
