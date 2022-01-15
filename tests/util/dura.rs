@@ -125,13 +125,13 @@ impl Dura {
 
     pub fn get_runtime_lock(&self) -> Option<RuntimeLock> {
         println!("$ cat ~/.cache/dura/runtime.db");
-        let cfg = RuntimeLock::load_file(self.runtime_lock_path().as_path()).ok();
-        println!("{:?}", cfg);
-        cfg
+        let cfg = RuntimeLock::load_file(self.runtime_lock_path().as_path());
+        println!("{:?}", &cfg);
+        cfg.ok()
     }
 
     pub fn save_runtime_lock(&self, cfg: &RuntimeLock) {
-        cfg.save_to_path(self.config_path().as_path());
+        cfg.save_to_path(self.runtime_lock_path().as_path());
     }
 
     pub fn git_repos(&self) -> HashSet<path::PathBuf> {
