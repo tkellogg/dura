@@ -34,10 +34,6 @@ impl GitRepo {
             .output();
 
         if let Ok(output) = child_proc {
-            if !output.status.success() {
-                // This cleans up test development by causing us to fail earlier
-                return None;
-            }
             let text = String::from_utf8(output.stdout).unwrap();
             if !text.is_empty() {
                 println!("{}", text);
@@ -46,7 +42,12 @@ impl GitRepo {
             if !err.is_empty() {
                 println!("{}", err);
             }
-            Some(text)
+            if !output.status.success() {
+                // This cleans up test development by causing us to fail earlier
+                None
+            } else {
+                Some(text)
+            }
         } else {
             None
         }
