@@ -7,6 +7,9 @@ use crate::util::dura::Dura;
 
 mod util;
 
+///    *         *
+///  /   \     /   \
+/// *      *  *     *
 #[test]
 fn octopus_initial_pass() {
     let tmp = tempfile::tempdir().unwrap();
@@ -19,11 +22,31 @@ fn octopus_initial_pass() {
     let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
     assert_eq!(octos.len(), 2);
 
-    dbg!(&branches);
-    assert_eq!(branches[3].commit_hash, get_child(&repo, octos[0], 0).unwrap().to_string());
+    assert_eq!(branches[0].commit_hash, get_child(&repo, octos[0], 0).unwrap().to_string());
+    assert_eq!(branches[1].commit_hash, get_child(&repo, octos[0], 1).unwrap().to_string());
+    assert_eq!(branches[2].commit_hash, get_child(&repo, octos[1], 0).unwrap().to_string());
+    assert_eq!(branches[3].commit_hash, get_child(&repo, octos[1], 1).unwrap().to_string());
+}
+
+/// *    *        *
+/// |  /   \    /   \
+/// * *     *  *     *
+#[test]
+fn extra_commit() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = GitRepo::new(tmp.path().to_path_buf());
+    repo.init();
+    let mut dura = Dura::new();
+    let branches = create_n_branches(&mut repo, &mut dura, 5);
+
+    let cfg = RebalanceConfig::FlatAgg { num_parents: Some(2) };
+    let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
+    assert_eq!(octos.len(), 3);
+
+    assert_eq!(branches[1].commit_hash, get_child(&repo, octos[0], 0).unwrap().to_string());
     assert_eq!(branches[2].commit_hash, get_child(&repo, octos[0], 1).unwrap().to_string());
-    assert_eq!(branches[1].commit_hash, get_child(&repo, octos[1], 0).unwrap().to_string());
-    assert_eq!(branches[0].commit_hash, get_child(&repo, octos[1], 1).unwrap().to_string());
+    assert_eq!(branches[3].commit_hash, get_child(&repo, octos[1], 0).unwrap().to_string());
+    assert_eq!(branches[4].commit_hash, get_child(&repo, octos[1], 1).unwrap().to_string());
 }
 
 fn create_n_branches(repo: &mut GitRepo, dura: &mut Dura, n: u8) -> Vec<CaptureStatus> {

@@ -34,13 +34,12 @@ fn get_hash_branches(repo: &Repository) -> Result<Vec<Branch>, Error> {
         })
         .collect();
 
-    //dbg!(ret.iter().map(|b| b.get().peel_to_commit().map(|c| c.author().when())).collect::<Vec<_>>());
-    sort_desc(&mut ret);
+    sort(&mut ret);
 
     Ok(ret)
 }
 
-fn sort_desc<'repo>(branches: &mut Vec<Branch<'repo>>) {
+fn sort<'repo>(branches: &mut Vec<Branch<'repo>>) {
     branches.sort_by(|a, b| {
         let a_time = a.get().peel_to_commit()
             .map(|c| c.time())
@@ -49,7 +48,7 @@ fn sort_desc<'repo>(branches: &mut Vec<Branch<'repo>>) {
             .map(|c| c.time())
             .unwrap_or(Time::new(0, 0));
 
-        b_time.cmp(&a_time)
+        a_time.cmp(&b_time)
     });
 }
 
@@ -62,8 +61,7 @@ fn build_tree<'a>(repo: &'a Repository, parent_commits: &[&'a Commit], num_paren
         num_pages += 1;
     }
 
-    for page in 0..num_pages {
-        let parents = &parent_commits[(page*(num_parents as usize))..((page+1)*(num_parents as usize))];
+    for parents in parent_commits.chunks(num_parents.into()) {
         if parents.len() == 0 {
             break;
         }
