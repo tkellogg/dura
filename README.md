@@ -80,8 +80,30 @@ If you're interested in improving this experience, [collaborate here](https://gi
 ## Install
 
 ### Arch Linux
+
 ```bash
 $ paru -S dura-git
+```
+
+### Nix / Nixos
+
+[Nix][nix website] is a tool that takes a unique approach to package
+management and system configuration. NixOS is a Linux distribution
+built on top of the Nix package manager.
+
+`dura` provides a ready-to-use [Nix flake file][nix flake].
+
+To run `dura` locally:
+
+```bash
+nix run github:tkellogg/dura
+```
+
+To run a development environment with the required tools
+to develop:
+
+```bash
+nix develop github:tkellogg/dura
 ```
 
 ### By Source
@@ -120,3 +142,6 @@ runs less frequently than every 5 seconds (potentially a lot less frequently, if
 Yes, any executable on the path named like `dura-{cmd}` will be executed
 when `dura {cmd}` is called. For example, `dura foo` will try to find an
 executable named dura-foo on the `$PATH`.
+
+[nix website]: https://nixos.org/
+[nix flake]: https://nixos.wiki/wiki/Flakes
