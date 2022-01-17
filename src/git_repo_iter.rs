@@ -85,7 +85,7 @@ impl<'a> GitRepoIter<'a> {
                         if let Some(dir_iter) = dir_iter_opt {
                             // clone because we're going from more global to less global scope
                             self.sub_iter
-                                .push((Rc::new(path), Rc::clone(&watch_config), dir_iter));
+                                .push((Rc::new(path), Rc::clone(watch_config), dir_iter));
                         }
                         CallState::Recurse
                     }
