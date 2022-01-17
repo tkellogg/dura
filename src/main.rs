@@ -1,7 +1,7 @@
 use std::fs::OpenOptions;
 use std::path::Path;
 
-use clap::{arg, App, AppSettings, Arg, Values};
+use clap::{arg, App, AppSettings, Arg};
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
@@ -130,12 +130,12 @@ async fn main() {
 
             let include = arg_matches
                 .values_of("include")
-                .unwrap_or(Values::default())
+                .unwrap_or_default()
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
             let exclude = arg_matches
                 .values_of("exclude")
-                .unwrap_or(Values::default())
+                .unwrap_or_default()
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
             let max_depth = arg_matches

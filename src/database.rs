@@ -53,7 +53,7 @@ impl RuntimeLock {
     }
 
     pub fn create_dir(path: &Path) {
-        path.parent().map(|dir| create_dir_all(dir).unwrap());
+        if let Some(dir) = path.parent() { create_dir_all(dir).unwrap() }
     }
 
     /// Used by tests to save to a temp dir

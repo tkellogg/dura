@@ -1,124 +1,71 @@
 name: Build
 
-on: [workflow_call, workflow_dispatch, push, pull_request]
+on: [ workflow_call, workflow_dispatch, push, pull_request ]
 
 jobs:
-    build-linux:
-        name: build-linux
-        runs-on: ubuntu-latest
+  build:
+    name: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            binary-suffix: linux-x86_64
+          - os: macos-latest
+            binary-suffix: macos-x86_64
+          - os: windows-latest
+            binary-suffix: windows-x86_64
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
 
-        steps:
-            - name: Check out source files
-              uses: actions/checkout@v2
-              with:
-                  fetch-depth: 1
+    steps:
+      - name: Check out source files
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
 
-            - name: Update Toolchain
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
+      - name: Update Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
 
-            - name: Build
-              uses: actions-rs/cargo@v1
-              with:
-                  command: build
-                  args: --release --all-features
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features
 
-            - name: Cargo Test
-              uses: actions-rs/cargo@v1
-              with:
-                  command: test
-                  args: --profile release
+      - name: Cargo Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets --all-features -- -D warnings
 
-            - name: Basic Testing
-              continue-on-error: true
-              run: |
-                  ${{ github.workspace }}/target/release/dura serve &
-                  sleep 15s
-                  ${{ github.workspace }}/target/release/dura kill
+      - name: Cargo Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --profile release
 
-            - name: Upload Binary
-              uses: actions/upload-artifact@v2
-              with:
-                  name: dura-linux-x86_64_${{ github.sha }}
-                  path: ${{ github.workspace }}/target/release/dura
+      - name: Basic Testing
+        continue-on-error: true
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          ${{ github.workspace }}/target/release/dura serve &
+          sleep 15s
+          ${{ github.workspace }}/target/release/dura kill
 
-    build-macos:
-        name: build-macos
-        runs-on: macos-latest
+      - name: Basic Testing (Windows)
+        continue-on-error: true
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          Start-Process -NoNewWindow ${{ github.workspace }}\target\release\dura.exe serve
+          Start-Sleep -s 15
+          ${{ github.workspace }}\target\release\dura.exe kill
 
-        steps:
-            - name: Check out source files
-              uses: actions/checkout@v2
-              with:
-                  fetch-depth: 1
+      - name: Upload Binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: dura-${{ matrix.binary-suffix }}_${{ github.sha }}
+          path: ${{ github.workspace }}/target/release/dura
 
-            - name: Update Toolchain
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-
-            - name: Build
-              uses: actions-rs/cargo@v1
-              with:
-                  command: build
-                  args: --release --all-features
-
-            - name: Cargo Test
-              uses: actions-rs/cargo@v1
-              with:
-                  command: test
-                  args: --profile release
-
-            - name: Basic Testing
-              continue-on-error: true
-              run: |
-                  ${{ github.workspace }}/target/release/dura serve &
-                  sleep 15s
-                  ${{ github.workspace }}/target/release/dura kill
-
-            - name: Upload Binary
-              uses: actions/upload-artifact@v2
-              with:
-                  name: dura-macos-x86_64_${{ github.sha }}
-                  path: ${{ github.workspace }}/target/release/dura
-
-    build-windows:
-        name: build-windows
-        runs-on: windows-latest
-
-        steps:
-            - name: Check out source files
-              uses: actions/checkout@v2
-              with:
-                  fetch-depth: 1
-
-            - name: Update Toolchain
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-
-            - name: Build
-              uses: actions-rs/cargo@v1
-              with:
-                  command: build
-                  args: --release --all-features
-
-            - name: Cargo Test
-              uses: actions-rs/cargo@v1
-              with:
-                  command: test
-                  args: --profile release
-
-            - name: Basic Testing
-              continue-on-error: true
-              run: |
-                  Start-Process -NoNewWindow ${{ github.workspace }}\target\release\dura.exe serve
-                  Start-Sleep -s 15
-                  ${{ github.workspace }}\target\release\dura.exe kill
-
-            - name: Upload Binary
-              uses: actions/upload-artifact@v2
-              with:
-                  name: dura-windows-x86_64_${{ github.sha }}
-                  path: ${{ github.workspace }}\target\release\dura.exe
