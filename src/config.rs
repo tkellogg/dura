@@ -98,10 +98,13 @@ impl Config {
     }
 
     pub fn create_dir(path: &Path) {
-        if let Some(dir) = path.parent() { create_dir_all(dir).unwrap() }
+        if let Some(dir) = path.parent() {
+            create_dir_all(dir)
+                .expect(format!("Failed to create directory at `{}`", dir.display()).as_str())
+        }
     }
 
-    /// Used by tests to save to a temp dir
+    /// Attempts to create parent dirs, serialize `self` as TOML and write to disk.
     pub fn save_to_path(&self, path: &Path) {
         Self::create_dir(path);
 
@@ -110,7 +113,7 @@ impl Config {
             Err(e) => {
                 println!("Unexpected error when deserializing config: {}", e);
                 return;
-            },
+            }
         };
 
         match fs::write(path, config_string) {
@@ -121,7 +124,7 @@ impl Config {
 
     pub fn set_watch(&mut self, path: String, cfg: WatchConfig) {
         let abs_path = fs::canonicalize(path).expect("The provided path is not a directory");
-        let abs_path = abs_path.to_str().unwrap();
+        let abs_path = abs_path.to_str().expect("The provided path is not valid unicode");
 
         if self.repos.contains_key(abs_path) {
             println!("{} is already being watched", abs_path)
@@ -133,7 +136,7 @@ impl Config {
 
     pub fn set_unwatch(&mut self, path: String) {
         let abs_path = fs::canonicalize(path).expect("The provided path is not a directory");
-        let abs_path = abs_path.to_str().unwrap().to_string();
+        let abs_path = abs_path.to_str().expect("The provided path is not valid unicode").to_string();
 
         match self.repos.remove(&abs_path) {
             Some(_) => println!("Stopped watching {}", abs_path),
