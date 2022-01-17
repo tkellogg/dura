@@ -11,23 +11,17 @@
   outputs = { self, nixpkgs, flake-utils, rust-overlay, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        mkPkgs = pkgs: extraOverlays: import pkgs {
-          inherit system;
-          overlays = [ (import rust-overlay) ];
+        pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ rust-overlay.overlay ];
         };
 
-        pkgs = mkPkgs nixpkgs [ rust-overlay.overlay ];
-      in
-      rec {
-        packages = flake-utils.lib.flattenTree {
-          dura = pkgs.rustPlatform.buildRustPackage {
+        dura = pkgs.rustPlatform.buildRustPackage {
             pname = "dura";
             version = "unstable-${self.lastModifiedDate}";
             description = "A background process that saves uncommited changes on git";
 
             src = self;
-
-            outputs = [ "out" ];
 
             cargoLock = {
               lockFile = self + "/Cargo.lock";
@@ -38,17 +32,22 @@
             ];
 
             nativeBuildInputs = [
+              pkgs.rust-bin.stable.latest.minimal
               pkgs.pkg-config
             ];
           };
+
+        packages = flake-utils.lib.flattenTree {
+            inherit dura;
         };
 
-        defaultPackage = packages.dura;
         apps = {
-          dura = flake-utils.lib.mkApp { drv = packages.dura; };
+            dura = flake-utils.lib.mkApp { drv = packages.dura; };
         };
+      in
+      rec {
+        defaultPackage = packages.dura;
         defaultApp = apps.dura;
-
         devShell = pkgs.mkShell {
           RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
 
