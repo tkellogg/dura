@@ -4,7 +4,7 @@ on: [ workflow_call, workflow_dispatch, push, pull_request ]
 
 jobs:
   build:
-    name: build-linux
+    name: build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
