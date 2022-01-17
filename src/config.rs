@@ -100,7 +100,10 @@ impl Config {
     pub fn create_dir(path: &Path) {
         if let Some(dir) = path.parent() {
             create_dir_all(dir)
-                .unwrap_or_else(|_| panic!("Failed to create directory at `{}`", dir.display()))
+                .unwrap_or_else(|_| panic!("Failed to create directory at `{}`.\
+                    Dura stores its configuration in `{}/config.toml`, \
+                    where you can instruct dura to watch patterns of Git repositories, among other things. \
+                    See https://github.com/tkellogg/dura for more information.", dir.display(), path.display()))
         }
     }
 
