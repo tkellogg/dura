@@ -18,7 +18,7 @@ pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<Vec<Oid>,
 
             if let Some(num_uncompressed) = num_uncompressed {
                 if (*num_uncompressed as usize) < parents.len() {
-                    Ok(build_tree(&repo, &parents[..], num_parents.unwrap_or(8))?)
+                    Ok(build_tree(&repo, &parents[(*num_uncompressed as usize)..], num_parents.unwrap_or(8))?)
                 } else {
                     Ok(vec![])
                 }

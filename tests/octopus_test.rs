@@ -29,11 +29,13 @@ fn octopus_initial_pass() {
     assert_eq!(branches[3].commit_hash, get_child(&repo, octos[0], 0).unwrap().to_string());
 }
 
-/// *    *        *
-/// |  /   \    /   \
+/// When num_uncompressed == 1, an extra commit is not added to the tree
+///
+///      *        *
+///    /   \    /   \
 /// * *     *  *     *
 #[test]
-fn extra_commit() {
+fn num_uncompressed_eq_1() {
     let tmp = tempfile::tempdir().unwrap();
     let mut repo = GitRepo::new(tmp.path().to_path_buf());
     repo.init();
@@ -42,7 +44,8 @@ fn extra_commit() {
 
     let cfg = RebalanceConfig::FlatAgg { num_parents: Some(2), num_uncompressed: Some(1) };
     let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
-    assert_eq!(octos.len(), 3);
+    assert_eq!(octos.len(), 2);
+    dbg!(branches.iter().map(|x| x.commit_hash.clone()).collect::<Vec<_>>());
 
     // branches[0] is the oldest
     assert_eq!(branches[0].commit_hash, get_child(&repo, octos[1], 1).unwrap().to_string());
