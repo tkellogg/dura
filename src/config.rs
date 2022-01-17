@@ -100,7 +100,7 @@ impl Config {
     pub fn create_dir(path: &Path) {
         if let Some(dir) = path.parent() {
             create_dir_all(dir)
-                .expect(format!("Failed to create directory at `{}`", dir.display()).as_str())
+                .unwrap_or_else(|_| panic!("Failed to create directory at `{}`", dir.display()))
         }
     }
 
