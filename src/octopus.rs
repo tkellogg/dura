@@ -8,7 +8,7 @@ pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<Vec<Oid>,
     let repo = Repository::open(repo_path)?;
     let hash_branches = get_hash_branches(&repo)?;
     match config {
-        RebalanceConfig::FlatAgg{ num_parents } => {
+        RebalanceConfig::FlatAgg{ num_parents, num_uncompressed } => {
             let parent_commits: Vec<_> = hash_branches.iter()
                 .flat_map(|branch| branch.get().peel_to_commit().ok())
                 .collect();
@@ -16,7 +16,16 @@ pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<Vec<Oid>,
                 .map(|commit| commit)
                 .collect();
 
-            Ok(build_tree(&repo, &parents[..], num_parents.unwrap_or(8))?)
+            if let Some(num_uncompressed) = num_uncompressed {
+                if (*num_uncompressed as usize) < parents.len() {
+                    Ok(build_tree(&repo, &parents[..], num_parents.unwrap_or(8))?)
+                } else {
+                    Ok(vec![])
+                }
+            } else {
+                // Setting num_uncompressed to None/null means we don't compress any branches.
+                Ok(vec![])
+            }
         }
     }
 }
@@ -48,25 +57,21 @@ fn sort<'repo>(branches: &mut Vec<Branch<'repo>>) {
             .map(|c| c.time())
             .unwrap_or(Time::new(0, 0));
 
-        a_time.cmp(&b_time)
+        b_time.cmp(&a_time)
     });
 }
 
 fn build_tree<'a>(repo: &'a Repository, parent_commits: &[&'a Commit], num_parents: u8) -> Result<Vec<Oid>, Error> {
     let mut ret: Vec<Oid> = Vec::new();
 
-    let mut num_pages = parent_commits.len() / (num_parents as usize);
-    if (parent_commits.len() % (num_parents as usize)) != 0 {
-        // when pages aren't perfectly aligned, add an extra page
-        num_pages += 1;
-    }
-
     for parents in parent_commits.chunks(num_parents.into()) {
         if parents.len() == 0 {
             break;
         }
 
-        let message = "dura summary tree";
+        let message = "dura compacted commit";
+        //let reversed = parents.iter().rev().map(|x| *x).collect::<Vec<&Commit>>();
+        //let parents = &reversed[..];
 
         let oid = repo.commit(
             None,

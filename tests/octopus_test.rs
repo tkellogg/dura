@@ -18,14 +18,15 @@ fn octopus_initial_pass() {
     let mut dura = Dura::new();
     let branches = create_n_branches(&mut repo, &mut dura, 4);
 
-    let cfg = RebalanceConfig::FlatAgg { num_parents: Some(2) };
+    let cfg = RebalanceConfig::FlatAgg { num_parents: Some(2), num_uncompressed: Some(0) };
     let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
     assert_eq!(octos.len(), 2);
 
-    assert_eq!(branches[0].commit_hash, get_child(&repo, octos[0], 0).unwrap().to_string());
-    assert_eq!(branches[1].commit_hash, get_child(&repo, octos[0], 1).unwrap().to_string());
-    assert_eq!(branches[2].commit_hash, get_child(&repo, octos[1], 0).unwrap().to_string());
-    assert_eq!(branches[3].commit_hash, get_child(&repo, octos[1], 1).unwrap().to_string());
+    // branches[0] is the oldest
+    assert_eq!(branches[0].commit_hash, get_child(&repo, octos[1], 1).unwrap().to_string());
+    assert_eq!(branches[1].commit_hash, get_child(&repo, octos[1], 0).unwrap().to_string());
+    assert_eq!(branches[2].commit_hash, get_child(&repo, octos[0], 1).unwrap().to_string());
+    assert_eq!(branches[3].commit_hash, get_child(&repo, octos[0], 0).unwrap().to_string());
 }
 
 /// *    *        *
@@ -39,14 +40,15 @@ fn extra_commit() {
     let mut dura = Dura::new();
     let branches = create_n_branches(&mut repo, &mut dura, 5);
 
-    let cfg = RebalanceConfig::FlatAgg { num_parents: Some(2) };
+    let cfg = RebalanceConfig::FlatAgg { num_parents: Some(2), num_uncompressed: Some(1) };
     let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
     assert_eq!(octos.len(), 3);
 
-    assert_eq!(branches[1].commit_hash, get_child(&repo, octos[0], 0).unwrap().to_string());
+    // branches[0] is the oldest
+    assert_eq!(branches[0].commit_hash, get_child(&repo, octos[1], 1).unwrap().to_string());
+    assert_eq!(branches[1].commit_hash, get_child(&repo, octos[1], 0).unwrap().to_string());
     assert_eq!(branches[2].commit_hash, get_child(&repo, octos[0], 1).unwrap().to_string());
-    assert_eq!(branches[3].commit_hash, get_child(&repo, octos[1], 0).unwrap().to_string());
-    assert_eq!(branches[4].commit_hash, get_child(&repo, octos[1], 1).unwrap().to_string());
+    assert_eq!(branches[3].commit_hash, get_child(&repo, octos[0], 0).unwrap().to_string());
 }
 
 fn create_n_branches(repo: &mut GitRepo, dura: &mut Dura, n: u8) -> Vec<CaptureStatus> {

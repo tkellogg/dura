@@ -17,15 +17,17 @@ pub enum RebalanceConfig {
     /// branch.
     FlatAgg {
         num_parents: Option<u8>,
+        num_uncompressed: Option<u16>,
     }
 }
 
 impl RebalanceConfig {
     pub fn or(&self, lower_precedence: &Self) -> Self {
         match (self, lower_precedence) {
-            (Self::FlatAgg {num_parents: a}, Self::FlatAgg {num_parents: b}) => {
+            (Self::FlatAgg {num_parents: a_np, num_uncompressed: a_nu}, Self::FlatAgg {num_parents: b_np, num_uncompressed: b_nu}) => {
                 Self::FlatAgg { 
-                    num_parents: a.or(b.clone()),
+                    num_parents: a_np.or(b_np.clone()),
+                    num_uncompressed: a_nu.or(b_nu.clone()),
                 }
             }
         }
