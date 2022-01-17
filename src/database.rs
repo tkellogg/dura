@@ -53,12 +53,19 @@ impl RuntimeLock {
     }
 
     pub fn create_dir(path: &Path) {
-        if let Some(dir) = path.parent() { create_dir_all(dir).unwrap() }
+        if let Some(dir) = path.parent() {
+            create_dir_all(dir)
+                .unwrap_or_else(|_| panic!("Failed to create directory at `{}`.\
+                    Dura stores its runtime cache in `{}/runtime.db`. \
+                    See https://github.com/tkellogg/dura for more information.", dir.display(), path.display()))
+        }
     }
 
-    /// Used by tests to save to a temp dir
+    /// Attempts to create parent dirs, serialize `self` as JSON and write to disk.
     pub fn save_to_path(&self, path: &Path) {
         Self::create_dir(path);
-        fs::write(path, serde_json::to_string(self).unwrap()).unwrap()
+
+        let json = serde_json::to_string(self).unwrap();
+        fs::write(path, json).unwrap()
     }
 }

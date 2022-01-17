@@ -13,7 +13,7 @@ use tracing_subscriber::{EnvFilter, Registry};
 
 #[tokio::main]
 async fn main() {
-    let cwd = std::env::current_dir().unwrap();
+    let cwd = std::env::current_dir().expect("Failed to get current directory");
 
     let arg_directory = Arg::new("directory")
         .default_value_os(cwd.as_os_str())
@@ -83,8 +83,8 @@ async fn main() {
         .get_matches();
 
     match matches.subcommand() {
-        Some(("capture", m)) => {
-            let dir = Path::new(m.value_of("directory").unwrap());
+        Some(("capture", arg_matches)) => {
+            let dir = Path::new(arg_matches.value_of("directory").unwrap());
             if let Some(oid) = snapshots::capture(dir).unwrap() {
                 println!("{}", oid);
             }
@@ -164,13 +164,17 @@ async fn main() {
 
 fn watch_dir(path: &std::path::Path, watch_config: WatchConfig) {
     let mut config = Config::load();
-    config.set_watch(path.to_str().unwrap().to_string(), watch_config);
+    let path = path.to_str().expect("The provided path is not valid unicode").to_string();
+
+    config.set_watch(path, watch_config);
     config.save();
 }
 
 fn unwatch_dir(path: &std::path::Path) {
     let mut config = Config::load();
-    config.set_unwatch(path.to_str().unwrap().to_string());
+    let path = path.to_str().expect("The provided path is not valid unicode").to_string();
+
+    config.set_unwatch(path);
     config.save();
 }
 
