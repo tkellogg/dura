@@ -122,7 +122,6 @@ async fn main() {
                 }
             }
 
-            tracing::info!(pid = std::process::id());
             poller::start().await;
         }
         Some(("watch", arg_matches)) => {

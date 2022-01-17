@@ -64,6 +64,7 @@ pub async fn start() {
     let mut runtime_lock = RuntimeLock::load();
     runtime_lock.pid = Some(process::id());
     runtime_lock.save();
+    info!(pid = std::process::id());
 
     loop {
         time::sleep(time::Duration::from_secs(5)).await;
