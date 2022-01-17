@@ -11,7 +11,7 @@ fn start_serve() {
     assert_eq!(None, dura.get_runtime_lock());
 
     dura.start_async(&["serve"], true);
-    dura.wait();
+    dura.primary.as_ref().map(|d| d.read_line(8).unwrap());
 
     assert_ne!(None, dura.pid(true));
     let runtime_lock = dura.get_runtime_lock();
@@ -30,7 +30,7 @@ fn start_serve_with_null_pid_in_config() {
     assert_ne!(None, dura.get_runtime_lock());
 
     dura.start_async(&["serve"], true);
-    dura.wait();
+    dura.primary.as_ref().map(|d| d.read_line(8).unwrap());
 
     assert_ne!(None, dura.pid(true));
     let runtime_lock = dura.get_runtime_lock();
@@ -51,7 +51,7 @@ fn start_serve_with_other_pid_in_config() {
     assert_ne!(None, dura.get_runtime_lock());
 
     dura.start_async(&["serve"], true);
-    dura.wait();
+    dura.primary.as_ref().map(|d| d.read_line(8).unwrap());
 
     assert_ne!(None, dura.pid(true));
     let runtime_lock = dura.get_runtime_lock();
@@ -70,7 +70,7 @@ fn start_serve_with_invalid_json() {
     assert_eq!(None, dura.get_runtime_lock());
 
     dura.start_async(&["serve"], true);
-    dura.wait();
+    dura.primary.as_ref().map(|d| d.read_line(8).unwrap());
 
     assert_ne!(None, dura.pid(true));
     let runtime_lock = dura.get_runtime_lock();

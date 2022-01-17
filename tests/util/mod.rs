@@ -3,3 +3,4 @@
 
 pub mod dura;
 pub mod git_repo;
+pub mod daemon;
