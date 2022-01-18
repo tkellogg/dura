@@ -1,12 +1,13 @@
 use std::{
-    ops, path, thread, time,
-    process::{Command, Stdio},
     collections::HashSet,
+    ops, path,
+    process::{Command, Stdio},
+    thread, time,
 };
 
+use crate::util::daemon::Daemon;
 use dura::config::Config;
 use dura::database::RuntimeLock;
-use crate::util::daemon::Daemon;
 
 /// Utility to start dura asynchronously (e.g. dura serve) and kill the process when this goes out
 /// of scope. This helps us do end-to-end tests where we invoke the executable, possibly multiple

@@ -1,5 +1,6 @@
 use std::fs::OpenOptions;
 use std::path::Path;
+use std::process;
 
 use clap::{arg, App, AppSettings, Arg};
 use dura::config::{Config, WatchConfig};
@@ -85,8 +86,16 @@ async fn main() {
     match matches.subcommand() {
         Some(("capture", arg_matches)) => {
             let dir = Path::new(arg_matches.value_of("directory").unwrap());
-            if let Some(oid) = snapshots::capture(dir).unwrap() {
-                println!("{}", oid);
+            match snapshots::capture(dir) {
+                Ok(oid_opt) => {
+                    if let Some(oid) = oid_opt {
+                        println!("{}", oid);
+                    }
+                }
+                Err(e) => {
+                    println!("Dura capture failed: {}", e);
+                    process::exit(1);
+                }
             }
         }
         Some(("serve", arg_matches)) => {
@@ -164,7 +173,10 @@ async fn main() {
 
 fn watch_dir(path: &std::path::Path, watch_config: WatchConfig) {
     let mut config = Config::load();
-    let path = path.to_str().expect("The provided path is not valid unicode").to_string();
+    let path = path
+        .to_str()
+        .expect("The provided path is not valid unicode")
+        .to_string();
 
     config.set_watch(path, watch_config);
     config.save();
@@ -172,7 +184,10 @@ fn watch_dir(path: &std::path::Path, watch_config: WatchConfig) {
 
 fn unwatch_dir(path: &std::path::Path) {
     let mut config = Config::load();
-    let path = path.to_str().expect("The provided path is not valid unicode").to_string();
+    let path = path
+        .to_str()
+        .expect("The provided path is not valid unicode")
+        .to_string();
 
     config.set_unwatch(path);
     config.save();

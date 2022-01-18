@@ -127,7 +127,9 @@ impl Config {
 
     pub fn set_watch(&mut self, path: String, cfg: WatchConfig) {
         let abs_path = fs::canonicalize(path).expect("The provided path is not a directory");
-        let abs_path = abs_path.to_str().expect("The provided path is not valid unicode");
+        let abs_path = abs_path
+            .to_str()
+            .expect("The provided path is not valid unicode");
 
         if self.repos.contains_key(abs_path) {
             println!("{} is already being watched", abs_path)
@@ -139,7 +141,10 @@ impl Config {
 
     pub fn set_unwatch(&mut self, path: String) {
         let abs_path = fs::canonicalize(path).expect("The provided path is not a directory");
-        let abs_path = abs_path.to_str().expect("The provided path is not valid unicode").to_string();
+        let abs_path = abs_path
+            .to_str()
+            .expect("The provided path is not valid unicode")
+            .to_string();
 
         match self.repos.remove(&abs_path) {
             Some(_) => println!("Stopped watching {}", abs_path),
