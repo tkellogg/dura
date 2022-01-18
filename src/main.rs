@@ -173,7 +173,10 @@ async fn main() {
 
 fn watch_dir(path: &std::path::Path, watch_config: WatchConfig) {
     let mut config = Config::load();
-    let path = path.to_str().expect("The provided path is not valid unicode").to_string();
+    let path = path
+        .to_str()
+        .expect("The provided path is not valid unicode")
+        .to_string();
 
     config.set_watch(path, watch_config);
     config.save();
@@ -181,7 +184,10 @@ fn watch_dir(path: &std::path::Path, watch_config: WatchConfig) {
 
 fn unwatch_dir(path: &std::path::Path) {
     let mut config = Config::load();
-    let path = path.to_str().expect("The provided path is not valid unicode").to_string();
+    let path = path
+        .to_str()
+        .expect("The provided path is not valid unicode")
+        .to_string();
 
     config.set_unwatch(path);
     config.save();

@@ -1,6 +1,6 @@
-use std::io::{BufReader, BufRead};
+use std::io::{BufRead, BufReader};
 use std::process::{Child, ChildStdout};
-use std::sync::mpsc::{Receiver, channel};
+use std::sync::mpsc::{channel, Receiver};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -10,10 +10,10 @@ use std::time::Duration;
 /// tests more reliable when they dispatch asynchronously to `dura serve`. However, nothing abot
 /// this is intended to be specific to dura.
 pub struct Daemon {
-   mailbox: Receiver<Option<String>>, 
-   pub child: Child,
-   /// Signals to kill daemon thread if this goes <= 0, like a CountDownLatch
-   kill_sign: Arc<Mutex<i32>>,
+    mailbox: Receiver<Option<String>>,
+    pub child: Child,
+    /// Signals to kill daemon thread if this goes <= 0, like a CountDownLatch
+    kill_sign: Arc<Mutex<i32>>,
 }
 
 impl Daemon {
@@ -21,8 +21,11 @@ impl Daemon {
         let kill_sign = Arc::new(Mutex::new(1));
         Self {
             mailbox: Self::attach(
-               child.stdout.take().expect("Configure Command to capture stdout"),
-               Arc::clone(&kill_sign),
+                child
+                    .stdout
+                    .take()
+                    .expect("Configure Command to capture stdout"),
+                Arc::clone(&kill_sign),
             ),
             child,
             kill_sign,
@@ -64,7 +67,9 @@ impl Daemon {
 
     /// Read a line from the child process, waiting at most timeout_secs.
     pub fn read_line(&self, timeout_secs: u64) -> Option<String> {
-        self.mailbox.recv_timeout(Duration::from_secs(timeout_secs)).unwrap()
+        self.mailbox
+            .recv_timeout(Duration::from_secs(timeout_secs))
+            .unwrap()
     }
 
     pub fn kill(&mut self) {
