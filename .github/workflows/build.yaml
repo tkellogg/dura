@@ -35,6 +35,12 @@ jobs:
           command: build
           args: --release --all-features
 
+      - name: Rustfmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --check
+
       - name: Cargo Clippy
         uses: actions-rs/cargo@v1
         with:
