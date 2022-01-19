@@ -60,11 +60,11 @@ impl Config {
         Self::get_dura_config_home().join("config.toml")
     }
 
-    /// Location of all config & database files. By default
+    /// Location of all config. By default
     ///
     /// Linux   :   $XDG_CONFIG_HOME/dura or $HOME/.config/dura
     /// macOS   :   $HOME/Library/Application Support
-    /// Windows :   {FOLDERID_RoamingAppData}/dura
+    /// Windows :   %AppData%\Roaming\dura
     ///
     /// This can be overridden by setting DURA_CONFIG_HOME environment variable.
     fn get_dura_config_home() -> PathBuf {

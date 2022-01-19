@@ -19,8 +19,13 @@ impl RuntimeLock {
         Self::get_dura_cache_home().join("runtime.db")
     }
 
-    /// Location of all config & database files. By default this is ~/.cache/dura but can be
-    /// overridden by setting DURA_CACHE_HOME environment variable.
+    /// Location of all database files. By default
+    ///
+    /// Linux   :   $XDG_CACHE_HOME/dura or $HOME/.cache/dura
+    /// macOS   :   $HOME/Library/Caches
+    /// Windows :   %AppData%\Local\dura
+    ///
+    /// This can be overridden by setting DURA_CACHE_HOME environment variable.
     fn get_dura_cache_home() -> PathBuf {
         // The environment variable lets us run tests independently, but I'm sure someone will come
         // up with another reason to use it.
