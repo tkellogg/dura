@@ -19,8 +19,8 @@ async fn main() {
     let cwd = std::env::current_dir().expect("Failed to get current directory");
 
     let suffix = option_env!("DURA_VERSION_SUFFIX")
-        .map(|v| format!(" @ {}", v).to_string())
-        .unwrap_or(String::from(""));
+        .map(|v| format!(" @ {}", v))
+        .unwrap_or_else(|| String::from(""));
 
     let version = format!("{}{}", crate_version!(), suffix);
 
