@@ -18,13 +18,19 @@ use tracing_subscriber::{EnvFilter, Registry};
 async fn main() {
     let cwd = std::env::current_dir().expect("Failed to get current directory");
 
+    let suffix = option_env!("DURA_VERSION_SUFFIX")
+        .map(|v| format!(" @ {}", v).to_string())
+        .unwrap_or(String::from(""));
+
+    let version = format!("{}{}", crate_version!(), suffix);
+
     let arg_directory = Arg::new("directory")
         .default_value_os(cwd.as_os_str())
         .help("The directory to watch. Defaults to current directory");
 
     let matches = App::new(crate_name!())
         .about(crate_description!())
-        .version(crate_version!())
+        .version(version.as_str())
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .author(crate_authors!())
         .subcommand(
