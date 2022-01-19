@@ -11,6 +11,8 @@
   outputs = { self, nixpkgs, flake-utils, rust-overlay, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
+        shortRev = if (self ? shortRev) then self.shortRev else "dev-${self.lastModifiedDate}";
+
         pkgs = import nixpkgs {
           inherit system;
           overlays = [ rust-overlay.overlay ];
@@ -18,7 +20,7 @@
 
         dura = pkgs.rustPlatform.buildRustPackage {
           pname = "dura";
-          version = "unstable-${self.lastModifiedDate}";
+          version = "${shortRev}";
           description = "A background process that saves uncommited changes on git";
 
           src = self;
@@ -35,6 +37,8 @@
             pkgs.rust-bin.stable.latest.minimal
             pkgs.pkg-config
           ];
+
+          DURA_VERSION_SUFFIX = "${shortRev}";
         };
 
         packages = flake-utils.lib.flattenTree {
@@ -49,6 +53,7 @@
         defaultPackage = packages.dura;
         defaultApp = apps.dura;
         devShell = pkgs.mkShell {
+          DURA_VERSION_SUFFIX = dura.version;
           RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
 
           buildInputs = [
