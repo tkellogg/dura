@@ -1,4 +1,4 @@
-use git2::{BranchType, Commit, DiffOptions, Error, IndexAddOption, Repository, Signature};
+use git2::{BranchType, DiffOptions, Error, IndexAddOption, Repository, Signature};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::Path;
@@ -37,18 +37,30 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
     }
 
     let branch_name = format!("dura/{}", head.id());
-    let branch_commit = find_head(&repo, branch_name.as_str());
-
-    if repo.find_branch(&branch_name, BranchType::Local).is_err() {
-        repo.branch(branch_name.as_str(), &head, false)?;
-    }
+    let branch_commit = match repo.find_branch(&branch_name, BranchType::Local) {
+        Ok(mut branch) => {
+            match branch.get().peel_to_commit() {
+                Ok(commit) if commit.id() != head.id() => Some(commit),
+                _ => {
+                    // Dura branch exist but no commit is made by dura
+                    // So we clean this branch
+                    branch.delete()?;
+                    None
+                }
+            }
+        }
+        Err(_) => {
+            None
+        }
+    };
+    let parent_commit = branch_commit.as_ref().unwrap_or(&head);
 
     // tree
     let mut index = repo.index()?;
     index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
 
     let dirty_diff = repo.diff_tree_to_index(
-        Some(&branch_commit.as_ref().unwrap_or(&head).tree()?),
+        Some(&parent_commit.tree()?),
         Some(&index),
         Some(DiffOptions::new().include_untracked(true)),
     )?;
@@ -58,15 +70,18 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
 
     let tree_oid = index.write_tree()?;
     let tree = repo.find_tree(tree_oid)?;
+    if repo.find_branch(&branch_name, BranchType::Local).is_err() {
+        repo.branch(branch_name.as_str(), &head, false)?;
+    }
 
     let committer = Signature::now(&get_git_author(&repo), &get_git_email(&repo))?;
     let oid = repo.commit(
-        Some(format!("refs/heads/{}", branch_name.as_str()).as_str()),
+        Some(&format!("refs/heads/{}", &branch_name)),
         &committer,
         &committer,
         message,
         &tree,
-        &[branch_commit.as_ref().unwrap_or(&head)],
+        &[&parent_commit],
     )?;
 
     Ok(Some(CaptureStatus {
@@ -74,14 +89,6 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
         commit_hash: oid.to_string(),
         base_hash: head.id().to_string(),
     }))
-}
-
-fn find_head<'repo>(repo: &'repo Repository, branch_name: &str) -> Option<Commit<'repo>> {
-    if let Ok(branch) = repo.find_branch(branch_name, BranchType::Local) {
-        branch.get().peel_to_commit().ok()
-    } else {
-        None
-    }
 }
 
 fn get_git_author(repo: &Repository) -> String {
