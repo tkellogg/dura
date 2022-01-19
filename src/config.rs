@@ -60,8 +60,13 @@ impl Config {
         Self::get_dura_config_home().join("config.toml")
     }
 
-    /// Location of all config & database files. By default this is ~/.config/dura but can be
-    /// overridden by setting DURA_CONFIG_HOME environment variable.
+    /// Location of all config & database files. By default
+    ///
+    /// Linux   :   $XDG_CONFIG_HOME/dura or $HOME/.config/dura
+    /// macOS   :   $HOME/Library/Application Support
+    /// Windows :   {FOLDERID_RoamingAppData}/dura
+    ///
+    /// This can be overridden by setting DURA_CONFIG_HOME environment variable.
     fn get_dura_config_home() -> PathBuf {
         // The environment variable lets us run tests independently, but I'm sure someone will come
         // up with another reason to use it.
@@ -147,7 +152,9 @@ impl Config {
             .to_string();
 
         match self.repos.remove(&abs_path) {
-            Some(_) => println!("Stopped watching {}", abs_path),
+            Some(_) => {
+                println!("Stopped watching {}", abs_path);
+            }
             None => println!("{} is not being watched", abs_path),
         }
     }
