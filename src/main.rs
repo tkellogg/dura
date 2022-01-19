@@ -2,7 +2,9 @@ use std::fs::OpenOptions;
 use std::path::Path;
 use std::process;
 
-use clap::{arg, App, AppSettings, Arg};
+use clap::{
+    arg, crate_authors, crate_description, crate_name, crate_version, App, AppSettings, Arg,
+};
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
@@ -20,11 +22,11 @@ async fn main() {
         .default_value_os(cwd.as_os_str())
         .help("The directory to watch. Defaults to current directory");
 
-    let matches = App::new("dura")
-        .about("Dura backs up your work automatically via Git commits.")
-        .version("0.1.0")
+    let matches = App::new(crate_name!())
+        .about(crate_description!())
+        .version(crate_version!())
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .author("Tim Kellogg and the Internet")
+        .author(crate_authors!())
         .subcommand(
             App::new("capture")
                 .short_flag('C')
