@@ -79,7 +79,7 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
         &committer,
         message,
         &tree,
-        &[&parent_commit],
+        &[parent_commit],
     )?;
 
     Ok(Some(CaptureStatus {
