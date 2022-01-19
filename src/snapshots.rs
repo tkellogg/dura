@@ -49,9 +49,7 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
                 }
             }
         }
-        Err(_) => {
-            None
-        }
+        Err(_) => None,
     };
     let parent_commit = branch_commit.as_ref().unwrap_or(&head);
 
