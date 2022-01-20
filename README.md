@@ -1,5 +1,7 @@
 # Dura
 
+[![Build][build badge]][build action]
+
 Dura is a background process that watches your Git repositories and commits your uncommitted changes without impacting
 HEAD, the current branch, or the Git index (staged files). If you ever get into an "oh snap!" situation where you think
 you just lost days of work, checkout a `dura` branch and recover.
@@ -91,9 +93,16 @@ $ paru -S dura-git
 management and system configuration. NixOS is a Linux distribution
 built on top of the Nix package manager.
 
-`dura` provides a ready-to-use [Nix flake file][nix flake].
+To run `dura` locally using pre-compiled binaries:
 
-To run `dura` locally:
+```bash
+nix shell nixpkgs#dura
+```
+
+If you're willing to contribute and develop, `dura` also provides its
+own ready-to-use [Nix flake][nix flake].
+
+To build and run the latest development version of `dura` locally:
 
 ```bash
 nix run github:tkellogg/dura
@@ -143,5 +152,7 @@ Yes, any executable on the path named like `dura-{cmd}` will be executed
 when `dura {cmd}` is called. For example, `dura foo` will try to find an
 executable named dura-foo on the `$PATH`.
 
+[build badge]: https://github.com/tkellogg/dura/actions/workflows/build.yaml/badge.svg
+[build action]: https://github.com/tkellogg/dura/actions/workflows/build.yaml
 [nix website]: https://nixos.org/
 [nix flake]: https://nixos.wiki/wiki/Flakes
