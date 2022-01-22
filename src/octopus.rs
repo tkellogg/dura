@@ -18,6 +18,7 @@ pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<Vec<Oid>,
 
             if let Some(num_uncompressed) = num_uncompressed {
                 if (*num_uncompressed as usize) < parents.len() {
+                    // parents[0] is the newest
                     Ok(build_tree(&repo, &parents[(*num_uncompressed as usize)..], num_parents.unwrap_or(8))?)
                 } else {
                     Ok(vec![])
@@ -61,17 +62,20 @@ fn sort<'repo>(branches: &mut Vec<Branch<'repo>>) {
     });
 }
 
+/// Build a single layer of a tree. We're still not sure what we want out of a branch compaction
+/// routine, so this is flexible enough to serve 2 use cases — a smaller amount of flat
+/// "octopuses" (merge commits with >2 parents) or a hierarchical "B-tree" (merge commits
+/// recursively rolling up into a single branch of cold branches).
 fn build_tree<'a>(repo: &'a Repository, parent_commits: &[&'a Commit], num_parents: u8) -> Result<Vec<Oid>, Error> {
     let mut ret: Vec<Oid> = Vec::new();
 
+    // parents[0] is the newest
     for parents in parent_commits.chunks(num_parents.into()) {
         if parents.len() == 0 {
             break;
         }
 
         let message = "dura compacted commit";
-        //let reversed = parents.iter().rev().map(|x| *x).collect::<Vec<&Commit>>();
-        //let parents = &reversed[..];
 
         let oid = repo.commit(
             None,
