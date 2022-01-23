@@ -196,13 +196,13 @@ async fn main() {
         Some(("metrics", arg_matches)) => {
             let mut input: Box<dyn Read> = match arg_matches.value_of("input") {
                 Some(input) => {
-                    Box::new(File::open(input).expect(format!("Couldn't open '{}'", input).as_str()))
+                    Box::new(File::open(input).unwrap_or_else(|_| panic!("Couldn't open '{}'", input)))
                 }
                 None => Box::new(BufReader::new(stdin()))
             };
             let mut output: Box<dyn Write> = match arg_matches.value_of("output") {
                 Some(output) => {
-                    Box::new(File::open(output).expect(format!("Couldn't open '{}'", output).as_str()))
+                    Box::new(File::open(output).unwrap_or_else(|_| panic!("Couldn't open '{}'", output)))
                 }
                 None => Box::new(BufWriter::new(stdout()))
             };

@@ -73,7 +73,7 @@ fn scrape_git(value: &mut Value, repo_cache: &mut HashMap<String, Rc<Repository>
     if let Some(repo_path_value) = value.get("repo") {
         let repo_path = repo_path_value.as_str().unwrap_or("");
         let repo = match repo_cache.get(repo_path) {
-            Some(repo) => Rc::clone(&repo),
+            Some(repo) => Rc::clone(repo),
             None => {
                 let repo = Rc::new(Repository::open(repo_path)?);
                 repo_cache.insert(repo_path.to_string(), Rc::clone(&repo));
