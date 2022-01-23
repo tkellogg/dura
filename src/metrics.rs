@@ -77,6 +77,12 @@ fn scrape_git(value: &mut Value) -> Result<(), git2::Error> {
             value["files_changed"] = json!(stats.files_changed());
             value["insertions"] = json!(stats.insertions());
             value["deletions"] = json!(stats.deletions());
+
+            let files: Vec<_> = diff.deltas()
+                .flat_map(|d| d.new_file().path())
+                .map(|p| p.to_str())
+                .collect();
+            value["files_changed"] = json!(files);
         };
     }
     Ok(())
