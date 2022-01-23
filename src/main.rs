@@ -207,7 +207,7 @@ async fn main() {
                 None => Box::new(BufWriter::new(stdout())),
             };
             if let Err(e) = metrics::get_snapshot_metrics(&mut input, &mut output) {
-                eprintln("Failed: {}", e);
+                eprintln!("Failed: {}", e);
                 process::exit(1);
             }
         }

@@ -82,11 +82,10 @@ fn scrape_git(
     repo_cache: &mut HashMap<String, Rc<Repository>>,
 ) -> Result<(), git2::Error> {
     if let Some(repo_path_value) = value.get("repo") {
-        // unwrap_or - the default value isn't really valid, but it's valid enough to pass into
-        // Repository::open(), which will generate a git2::Error. I'm not sure if this is a good
-        // practice, but this bogus return value allows us to avoid panicing. If it's not a real
-        // path, then it won't be found in repo_cache either.
-        let repo_path = repo_path_value.as_str().unwrap_or("");
+        let repo_path = match repo_path_value.as_str() {
+            Some(x) => Ok(x),
+            None => Err(git2::Error::from_str(format!("Couldn't find 'repo' in JSON").as_str()))
+        }?;
         let repo = match repo_cache.get(repo_path) {
             Some(repo) => Rc::clone(repo),
             None => {
