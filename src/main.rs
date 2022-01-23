@@ -1,6 +1,7 @@
-use std::fs::OpenOptions;
+use std::fs::{OpenOptions, File};
 use std::path::Path;
 use std::process;
+use std::io::{Read, Write, stdin, stdout, BufReader, BufWriter};
 
 use clap::{
     arg, crate_authors, crate_description, crate_name, crate_version, App, AppSettings, Arg,
@@ -8,6 +9,7 @@ use clap::{
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
+use dura::metrics;
 use dura::poller;
 use dura::snapshots;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
@@ -88,6 +90,22 @@ async fn main() {
                 .short_flag('K')
                 .long_flag("kill")
                 .about("Stop the running worker (should only be a single worker).")
+        )
+        .subcommand(
+            App::new("metrics")
+                .short_flag('M')
+                .long_flag("metrics")
+                .about("Convert logs into richer metrics about snapshots.")
+                .arg(arg!(-i --input)
+                     .required(false)
+                     .takes_value(true)
+                     .help("The log file to read. Defaults to stdin.")
+                 )
+                .arg(arg!(-o --output)
+                     .required(false)
+                     .takes_value(true)
+                     .help("The json file to write. Defaults to stdout.")
+                 )
         )
         .get_matches();
 
@@ -174,6 +192,21 @@ async fn main() {
         }
         Some(("kill", _)) => {
             kill();
+        }
+        Some(("metrics", arg_matches)) => {
+            let mut input: Box<dyn Read> = match arg_matches.value_of("input") {
+                Some(input) => {
+                    Box::new(File::open(input).expect(format!("Couldn't open '{}'", input).as_str()))
+                }
+                None => Box::new(BufReader::new(stdin()))
+            };
+            let mut output: Box<dyn Write> = match arg_matches.value_of("output") {
+                Some(output) => {
+                    Box::new(File::open(output).expect(format!("Couldn't open '{}'", output).as_str()))
+                }
+                None => Box::new(BufWriter::new(stdout()))
+            };
+            metrics::get_snapshot_metrics(&mut input, &mut output).unwrap();
         }
         _ => unreachable!(),
     }
