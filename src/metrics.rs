@@ -84,7 +84,9 @@ fn scrape_git(
     if let Some(repo_path_value) = value.get("repo") {
         let repo_path = match repo_path_value.as_str() {
             Some(x) => Ok(x),
-            None => Err(git2::Error::from_str(format!("Couldn't find 'repo' in JSON").as_str()))
+            None => Err(git2::Error::from_str(
+                format!("Couldn't find 'repo' in JSON").as_str(),
+            )),
         }?;
         let repo = match repo_cache.get(repo_path) {
             Some(repo) => Rc::clone(repo),
