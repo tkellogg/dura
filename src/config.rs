@@ -13,9 +13,13 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum RebalanceConfig {
-    /// Aggregate dura branches into fewer branches. Combine num_parents branches into a single
-    /// branch.
+    /// Aggregate dura branches into fewer branches. Similar to Tree but only rolls up one level.
     FlatAgg {
+        num_parents: Option<u8>,
+        num_uncompressed: Option<u16>,
+    },
+    /// Aggregates dura branches into one single branch.
+    Tree {
         num_parents: Option<u8>,
         num_uncompressed: Option<u16>,
     }
@@ -30,6 +34,13 @@ impl RebalanceConfig {
                     num_uncompressed: a_nu.or(b_nu.clone()),
                 }
             }
+            (Self::Tree {num_parents: a_np, num_uncompressed: a_nu}, Self::Tree {num_parents: b_np, num_uncompressed: b_nu}) => {
+                Self::Tree { 
+                    num_parents: a_np.or(b_np.clone()),
+                    num_uncompressed: a_nu.or(b_nu.clone()),
+                }
+            }
+            (_, other) => other.clone()
         }
     }
 }

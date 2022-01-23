@@ -78,6 +78,82 @@ fn num_uncompressed_eq_0() {
     assert_eq!(branches[4].commit_hash, get_child(&repo, octos[0], 0).unwrap().to_string());
 }
 
+/// When num_uncompressed == 3, the extra commit is added to an octopus
+///
+///       *     *
+///       |   /   \
+/// *  *  *  *     *
+#[test]
+fn num_uncompressed_eq_2() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = GitRepo::new(tmp.path().to_path_buf());
+    repo.init();
+    let mut dura = Dura::new();
+    let branches = create_n_branches(&mut repo, &mut dura, 5);
+
+    let cfg = RebalanceConfig::FlatAgg { num_parents: Some(2), num_uncompressed: Some(2) };
+    let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
+    assert_eq!(octos.len(), 2);
+
+    // branches[0] is the oldest
+    assert_eq!(branches[0].commit_hash, get_child(&repo, octos[1], 0).unwrap().to_string());
+    assert_eq!(branches[1].commit_hash, get_child(&repo, octos[0], 1).unwrap().to_string());
+    assert_eq!(branches[2].commit_hash, get_child(&repo, octos[0], 0).unwrap().to_string());
+}
+
+/// When num_uncompressed == 3, the extra commit is added to an octopus
+///
+///
+///       *
+///   ___/|\___   
+///  / /  |  \ \      
+/// *  *  *   * *
+#[test]
+fn num_parents_eq_5_num_uncompressed_eq_0() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = GitRepo::new(tmp.path().to_path_buf());
+    repo.init();
+    let mut dura = Dura::new();
+    let branches = create_n_branches(&mut repo, &mut dura, 5);
+
+    let cfg = RebalanceConfig::FlatAgg { num_parents: Some(5), num_uncompressed: Some(0) };
+    let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
+    assert_eq!(octos.len(), 1);
+
+    // branches[0] is the oldest
+    assert_eq!(branches[0].commit_hash, get_child(&repo, octos[0], 4).unwrap().to_string());
+    assert_eq!(branches[1].commit_hash, get_child(&repo, octos[0], 3).unwrap().to_string());
+    assert_eq!(branches[2].commit_hash, get_child(&repo, octos[0], 2).unwrap().to_string());
+    assert_eq!(branches[3].commit_hash, get_child(&repo, octos[0], 1).unwrap().to_string());
+    assert_eq!(branches[4].commit_hash, get_child(&repo, octos[0], 0).unwrap().to_string());
+}
+
+/// When num_uncompressed == 3, the extra commit is added to an octopus
+///       *
+///     /  \
+///    /    \
+///   *      *    
+///  / \    / \           
+/// *   *  *   *
+#[test]
+fn tree_2_levels() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = GitRepo::new(tmp.path().to_path_buf());
+    repo.init();
+    let mut dura = Dura::new();
+    let branches = create_n_branches(&mut repo, &mut dura, 4);
+
+    let cfg = RebalanceConfig::Tree { num_parents: Some(2), num_uncompressed: Some(0) };
+    let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
+    assert_eq!(octos.len(), 1);
+
+    // branches[0] is the oldest
+    assert_eq!(branches[0].commit_hash, get_child_2(&repo, octos[0], 1, 1).unwrap().to_string());
+    assert_eq!(branches[1].commit_hash, get_child_2(&repo, octos[0], 1, 0).unwrap().to_string());
+    assert_eq!(branches[2].commit_hash, get_child_2(&repo, octos[0], 0, 1).unwrap().to_string());
+    assert_eq!(branches[3].commit_hash, get_child_2(&repo, octos[0], 0, 0).unwrap().to_string());
+}
+
 fn create_n_branches(repo: &mut GitRepo, dura: &mut Dura, n: u8) -> Vec<CaptureStatus> {
     repo.write_file("foo.txt");
     let mut ret = Vec::new();
@@ -96,4 +172,12 @@ fn get_child(repo: &GitRepo, oid: Oid, parent: usize) -> Result<Oid, Error> {
     let git = repo.repo();
     let parents: Vec<_> = git.find_commit(oid)?.parents().collect();
     Ok(parents[parent].id())
+}
+
+/// Get child 2-layers deep
+fn get_child_2(repo: &GitRepo, oid: Oid, parent: usize, parent_2: usize) -> Result<Oid, Error> {
+    let git = repo.repo();
+    let parents: Vec<_> = git.find_commit(oid)?.parents().collect();
+    let parents_2: Vec<_> = git.find_commit(parents[parent].id())?.parents.collect();
+    Ok(parents_2[parent_2].id())
 }
