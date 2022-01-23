@@ -1,7 +1,7 @@
-use std::fs::{OpenOptions, File};
+use std::fs::{File, OpenOptions};
+use std::io::{stdin, stdout, BufReader, BufWriter, Read, Write};
 use std::path::Path;
 use std::process;
-use std::io::{Read, Write, stdin, stdout, BufReader, BufWriter};
 
 use clap::{
     arg, crate_authors, crate_description, crate_name, crate_version, App, AppSettings, Arg,
@@ -195,16 +195,16 @@ async fn main() {
         }
         Some(("metrics", arg_matches)) => {
             let mut input: Box<dyn Read> = match arg_matches.value_of("input") {
-                Some(input) => {
-                    Box::new(File::open(input).unwrap_or_else(|_| panic!("Couldn't open '{}'", input)))
-                }
-                None => Box::new(BufReader::new(stdin()))
+                Some(input) => Box::new(
+                    File::open(input).unwrap_or_else(|_| panic!("Couldn't open '{}'", input)),
+                ),
+                None => Box::new(BufReader::new(stdin())),
             };
             let mut output: Box<dyn Write> = match arg_matches.value_of("output") {
-                Some(output) => {
-                    Box::new(File::open(output).unwrap_or_else(|_| panic!("Couldn't open '{}'", output)))
-                }
-                None => Box::new(BufWriter::new(stdout()))
+                Some(output) => Box::new(
+                    File::open(output).unwrap_or_else(|_| panic!("Couldn't open '{}'", output)),
+                ),
+                None => Box::new(BufWriter::new(stdout())),
             };
             metrics::get_snapshot_metrics(&mut input, &mut output).unwrap();
         }

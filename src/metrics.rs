@@ -1,17 +1,20 @@
-use std::rc::Rc;
-use std::io::{self, BufRead, Write};
-use std::collections::HashMap;
+use crate::log::Operation;
 use git2::{Oid, Repository};
-use serde_json::{Value, Number, json};
 use serde_json::map::Map;
 use serde_json::value::from_value;
-use crate::log::Operation;
+use serde_json::{json, Number, Value};
+use std::collections::HashMap;
+use std::io::{self, BufRead, Write};
+use std::rc::Rc;
 
 type FlexResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 /// Reads an input stream that contains dura logs and enriches them with more analytics-ready info
 /// like number of insertions & deletions. The result is written back out to an output stream.
-pub fn get_snapshot_metrics(input: &mut dyn io::Read, output: &mut dyn io::Write) -> FlexResult<()> {
+pub fn get_snapshot_metrics(
+    input: &mut dyn io::Read,
+    output: &mut dyn io::Write,
+) -> FlexResult<()> {
     let mut reader = io::BufReader::new(input);
     let mut writer = io::BufWriter::new(output);
     let mut line: u64 = 0; // for printing better error messages
@@ -27,7 +30,7 @@ pub fn get_snapshot_metrics(input: &mut dyn io::Read, output: &mut dyn io::Write
                 scrape_git(&mut output, &mut repo_cache)?;
                 writeln!(&mut writer, "{}", output)?;
             }
-            Ok(None) => {},
+            Ok(None) => {}
             // Seems like a good way to report errors, idk...
             Err(e) => eprintln!("line {}: {}", line, e),
         }
@@ -45,7 +48,12 @@ fn scrape_log(line: String) -> serde_json::Result<Option<Value>> {
 
     if let Some(op_value) = input_val.get("fields").and_then(|f| f.get("operation")) {
         match from_value(op_value.clone())? {
-            Operation::Snapshot {repo, op: Some(op), error: _, latency} => {
+            Operation::Snapshot {
+                repo,
+                op: Some(op),
+                error: _,
+                latency,
+            } => {
                 output_val["repo"] = Value::String(repo);
                 if let Some(latency) = Number::from_f64(latency as f64) {
                     output_val["latency"] = Value::Number(latency);
@@ -54,7 +62,7 @@ fn scrape_log(line: String) -> serde_json::Result<Option<Value>> {
                 output_val["commit_hash"] = Value::String(op.commit_hash);
                 output_val["base_hash"] = Value::String(op.base_hash);
             }
-            _ => return Ok(None)
+            _ => return Ok(None),
         }
     } else {
         return Ok(None);
@@ -69,7 +77,10 @@ fn scrape_log(line: String) -> serde_json::Result<Option<Value>> {
 /// completely non-scientific measure. It still seems to take unexpectedly long, probably because
 /// it still has to open lots of files (for each commit & tree object) behind the scenes, and this
 /// is inherently not cache-able.
-fn scrape_git(value: &mut Value, repo_cache: &mut HashMap<String, Rc<Repository>>) -> Result<(), git2::Error> {
+fn scrape_git(
+    value: &mut Value,
+    repo_cache: &mut HashMap<String, Rc<Repository>>,
+) -> Result<(), git2::Error> {
     if let Some(repo_path_value) = value.get("repo") {
         let repo_path = repo_path_value.as_str().unwrap_or("");
         let repo = match repo_cache.get(repo_path) {
@@ -80,20 +91,22 @@ fn scrape_git(value: &mut Value, repo_cache: &mut HashMap<String, Rc<Repository>
                 repo
             }
         };
-        let commit_opt = value.get("commit_hash")
+        let commit_opt = value
+            .get("commit_hash")
             .and_then(|c| c.as_str())
             .and_then(|c| Oid::from_str(c).ok())
             .and_then(|c| repo.find_commit(c).ok());
-        let parent_commit = commit_opt.as_ref()
-            .and_then(|c| c.parents().last());
+        let parent_commit = commit_opt.as_ref().and_then(|c| c.parents().last());
         if let (Some(commit), Some(parent)) = (commit_opt, parent_commit) {
-            let diff = repo.diff_tree_to_tree(Some(&parent.tree()?), Some(&commit.tree()?), None)?;
+            let diff =
+                repo.diff_tree_to_tree(Some(&parent.tree()?), Some(&commit.tree()?), None)?;
             let stats = diff.stats()?;
-            value["files_changed"] = json!(stats.files_changed());
+            value["num_files_changed"] = json!(stats.files_changed());
             value["insertions"] = json!(stats.insertions());
             value["deletions"] = json!(stats.deletions());
 
-            let files: Vec<_> = diff.deltas()
+            let files: Vec<_> = diff
+                .deltas()
                 .flat_map(|d| d.new_file().path())
                 .map(|p| p.to_str())
                 .collect();
@@ -127,11 +140,23 @@ mod tests {
 
         let output = scrape_log(line.to_string()).unwrap().unwrap();
 
-        assert_eq!(output["time"].as_str(), Some("2022-01-14T01:49:51.638031+00:00"));
+        assert_eq!(
+            output["time"].as_str(),
+            Some("2022-01-14T01:49:51.638031+00:00")
+        );
         assert_eq!(output["repo"].as_str(), Some("/Users/timkellogg/code/dura"));
-        assert_eq!(output["dura_branch"].as_str(), Some("dura/3e8e8c99b5434e726b13f56ba00d139bab57d5eb"));
-        assert_eq!(output["commit_hash"].as_str(), Some("3423d21a2937d95119982395bc1281d3d8ebe3b6"));
-        assert_eq!(output["base_hash"].as_str(), Some("3e8e8c99b5434e726b13f56ba00d139bab57d5eb"));
+        assert_eq!(
+            output["dura_branch"].as_str(),
+            Some("dura/3e8e8c99b5434e726b13f56ba00d139bab57d5eb")
+        );
+        assert_eq!(
+            output["commit_hash"].as_str(),
+            Some("3423d21a2937d95119982395bc1281d3d8ebe3b6")
+        );
+        assert_eq!(
+            output["base_hash"].as_str(),
+            Some("3e8e8c99b5434e726b13f56ba00d139bab57d5eb")
+        );
         let latency = output["latency"].as_f64().unwrap();
         assert!(latency < (0.00988253 + f32::EPSILON).into());
         assert!(latency > (0.00988253 - f32::EPSILON).into());
@@ -150,4 +175,3 @@ mod tests {
         assert_eq!(output, None);
     }
 }
-
