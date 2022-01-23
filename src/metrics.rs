@@ -1,5 +1,6 @@
-use std::io;
-use std::io::{BufRead, Write};
+use std::rc::Rc;
+use std::io::{self, BufRead, Write};
+use std::collections::HashMap;
 use git2::{Oid, Repository};
 use serde_json::{Value, Number, json};
 use serde_json::map::Map;
@@ -14,6 +15,7 @@ pub fn get_snapshot_metrics(input: &mut dyn io::Read, output: &mut dyn io::Write
     let mut reader = io::BufReader::new(input);
     let mut writer = io::BufWriter::new(output);
     let mut line: u64 = 0; // for printing better error messages
+    let mut repo_cache: HashMap<String, Rc<Repository>> = HashMap::new();
     loop {
         line += 1;
         let mut input_line = String::new();
@@ -22,7 +24,7 @@ pub fn get_snapshot_metrics(input: &mut dyn io::Read, output: &mut dyn io::Write
         }
         match scrape_log(input_line) {
             Ok(Some(mut output)) => {
-                scrape_git(&mut output)?;
+                scrape_git(&mut output, &mut repo_cache)?;
                 writeln!(&mut writer, "{}", output)?;
             }
             Ok(None) => {},
@@ -62,9 +64,22 @@ fn scrape_log(line: String) -> serde_json::Result<Option<Value>> {
 }
 
 /// Use the info captured from scrape_log to open a repo and capture information about the commit
-fn scrape_git(value: &mut Value) -> Result<(), git2::Error> {
-    if let Some(repo_path) = value.get("repo") {
-        let repo = Repository::open(repo_path.as_str().unwrap_or(""))?;
+///
+/// The repo_cache is retained between calls. This cache seems to cut runtime by 50% in a
+/// completely non-scientific measure. It still seems to take unexpectedly long, probably because
+/// it still has to open lots of files (for each commit & tree object) behind the scenes, and this
+/// is inherently not cache-able.
+fn scrape_git(value: &mut Value, repo_cache: &mut HashMap<String, Rc<Repository>>) -> Result<(), git2::Error> {
+    if let Some(repo_path_value) = value.get("repo") {
+        let repo_path = repo_path_value.as_str().unwrap_or("");
+        let repo = match repo_cache.get(repo_path) {
+            Some(repo) => Rc::clone(&repo),
+            None => {
+                let repo = Rc::new(Repository::open(repo_path)?);
+                repo_cache.insert(repo_path.to_string(), Rc::clone(&repo));
+                repo
+            }
+        };
         let commit_opt = value.get("commit_hash")
             .and_then(|c| c.as_str())
             .and_then(|c| Oid::from_str(c).ok())
