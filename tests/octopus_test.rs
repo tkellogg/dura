@@ -1,6 +1,6 @@
 use crate::util::dura::Dura;
 use crate::util::git_repo::GitRepo;
-use dura::config::RebalanceConfig;
+use dura::config::ConsolidateStrategy;
 use dura::octopus;
 use dura::snapshots::CaptureStatus;
 use git2::{Error, Oid};
@@ -18,11 +18,11 @@ fn octopus_initial_pass() {
     let mut dura = Dura::new();
     let branches = create_n_branches(&mut repo, &mut dura, 4);
 
-    let cfg = RebalanceConfig::FlatAgg {
+    let cfg = ConsolidateStrategy::Flat {
         num_parents: Some(2),
         num_uncompressed: Some(0),
     };
-    let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
+    let octos = octopus::consolidate(tmp.path(), &cfg).unwrap();
     assert_eq!(octos.len(), 2);
 
     // branches[0] is the oldest
@@ -57,11 +57,11 @@ fn num_uncompressed_eq_1() {
     let mut dura = Dura::new();
     let branches = create_n_branches(&mut repo, &mut dura, 5);
 
-    let cfg = RebalanceConfig::FlatAgg {
+    let cfg = ConsolidateStrategy::Flat {
         num_parents: Some(2),
         num_uncompressed: Some(1),
     };
-    let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
+    let octos = octopus::consolidate(tmp.path(), &cfg).unwrap();
     assert_eq!(octos.len(), 2);
 
     // branches[0] is the oldest
@@ -96,11 +96,11 @@ fn num_uncompressed_eq_0() {
     let mut dura = Dura::new();
     let branches = create_n_branches(&mut repo, &mut dura, 5);
 
-    let cfg = RebalanceConfig::FlatAgg {
+    let cfg = ConsolidateStrategy::Flat {
         num_parents: Some(2),
         num_uncompressed: Some(0),
     };
-    let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
+    let octos = octopus::consolidate(tmp.path(), &cfg).unwrap();
     assert_eq!(octos.len(), 3);
 
     // branches[0] is the oldest
@@ -139,11 +139,11 @@ fn num_uncompressed_eq_2() {
     let mut dura = Dura::new();
     let branches = create_n_branches(&mut repo, &mut dura, 5);
 
-    let cfg = RebalanceConfig::FlatAgg {
+    let cfg = ConsolidateStrategy::Flat {
         num_parents: Some(2),
         num_uncompressed: Some(2),
     };
-    let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
+    let octos = octopus::consolidate(tmp.path(), &cfg).unwrap();
     assert_eq!(octos.len(), 2);
 
     // branches[0] is the oldest
@@ -176,11 +176,11 @@ fn num_parents_eq_5_num_uncompressed_eq_0() {
     let mut dura = Dura::new();
     let branches = create_n_branches(&mut repo, &mut dura, 5);
 
-    let cfg = RebalanceConfig::FlatAgg {
+    let cfg = ConsolidateStrategy::Flat {
         num_parents: Some(5),
         num_uncompressed: Some(0),
     };
-    let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
+    let octos = octopus::consolidate(tmp.path(), &cfg).unwrap();
     assert_eq!(octos.len(), 1);
 
     // branches[0] is the oldest
@@ -221,11 +221,11 @@ fn tree_2_levels() {
     let mut dura = Dura::new();
     let branches = create_n_branches(&mut repo, &mut dura, 4);
 
-    let cfg = RebalanceConfig::Tree {
+    let cfg = ConsolidateStrategy::Tree {
         num_parents: Some(2),
         num_uncompressed: Some(0),
     };
-    let octos = octopus::rebalance(tmp.path(), &cfg).unwrap();
+    let octos = octopus::consolidate(tmp.path(), &cfg).unwrap();
     assert_eq!(octos.len(), 1);
 
     // branches[0] is the oldest

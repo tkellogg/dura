@@ -2,7 +2,7 @@ use git2::{Branch, BranchType, Commit, Error, Oid, Repository, Time};
 use std::ops::Deref;
 use std::path::Path;
 
-use crate::config::RebalanceConfig;
+use crate::config::ConsolidateStrategy;
 
 /// Maximum recursion level when running the tree builder algorithm. This limits to the number of
 /// branches that can be summarized to 2**n worst case, it's actually num_parents**n. So n==16
@@ -10,10 +10,31 @@ use crate::config::RebalanceConfig;
 /// higher by increasing num_parents. No one should be running into this limit.
 const MAX_TREE_HEIGHT: usize = 16;
 
-/// Create or rebalance the octo-tree cold history.
-pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<Vec<Oid>, Error> {
+/// De-clutters dura branches by combining existing branches into "cold storage" tags. The snapshot
+/// branches are combined via "octopus" commits, i.e. merge commits with more than 2 parents. 
+///
+/// There are 2 main strategies:
+/// 
+///  1. Flat - snapshot branches are consolidated into far fewer tags.
+///  2. Tree - Effectively "single branch mode". Snapshot branches are recursively rolled up into
+///     octopus merge commits (a la Flat, but recursively) until there's a single commit on top.
+///     This commit is tagged as `dura/cold`.
+///
+/// Both of these strategies have some options in common:
+///
+///  * num_uncompressed - The number of snapshot branches to exclude from consolidation. To get
+///    true single-branch mode, use Tree with num_uncompressed=0.
+///  * num_parents - The number of parent commits that each merge commit should have, or, how many
+///    legs should the octopus have? This is technically unlimited, but should probably be kept
+///    under 60.
+pub fn consolidate(repo_path: &Path, config: &ConsolidateStrategy) -> Result<Vec<Oid>, Error> {
     let repo = Repository::open(repo_path)?;
-    let hash_branches = get_hash_branches(&repo)?;
+    let mut hash_branches = get_dura_snapshot_branches(&repo)?;
+
+    // Not sure what order the branches come back in, so let's take control. We need them to be in
+    // reverse order, so newest is [0] and we can slice off num_uncompressed easily enough.
+    sort(&mut hash_branches);
+
     let parent_commits: Vec<_> = hash_branches
         .iter()
         .flat_map(|branch| branch.get().peel_to_commit().ok())
@@ -21,14 +42,17 @@ pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<Vec<Oid>,
     let parents = to_refs(&parent_commits);
 
     match config {
-        RebalanceConfig::FlatAgg {
+        // Flat is just the bottom level of Tree. All snapshot branches are combined into
+        // "octopus" commits. These become tags and are named "dura/cold/1", "dura/cold/2",...
+        ConsolidateStrategy::Flat {
             num_parents,
             num_uncompressed,
         } => match get_args(*num_parents, *num_uncompressed, &parents[..]) {
             Some((num_parents, commits)) => Ok(build_tree(&repo, commits, num_parents)?),
             None => Ok(vec![]),
         },
-        RebalanceConfig::Tree {
+        // Tree
+        ConsolidateStrategy::Tree {
             num_parents,
             num_uncompressed,
         } => {
@@ -88,8 +112,23 @@ fn to_refs<T>(vec: &[T]) -> Vec<&T> {
     vec.iter().collect()
 }
 
-fn get_hash_branches(repo: &Repository) -> Result<Vec<Branch>, Error> {
-    let mut ret: Vec<_> = repo
+pub fn get_dura_snapshot_branches(repo: &Repository) -> Result<Vec<Branch>, Error> {
+    filter_branches(repo, |name| {
+        let splits: Vec<_> = name.split('/').collect();
+        name.starts_with("dura/") && splits.len() == 2 && splits.get(1) != Some(&"cold")
+    })
+}
+
+pub fn get_dura_cold_flat_branches(repo: &Repository) -> Result<Vec<Branch>, Error> {
+    filter_branches(repo, |name| name.starts_with("dura/cold/") && name.split('/').count() == 3)
+}
+
+pub fn get_dura_cold_branch(repo: &Repository) -> Result<Branch, Error> {
+    repo.find_branch("dura/cold", BranchType::Local)
+}
+
+fn filter_branches(repo: &Repository, predicate: fn(&str) -> bool) -> Result<Vec<Branch>, Error> {
+    let ret: Vec<_> = repo
         .branches(Some(BranchType::Local))?
         .flat_map(|res| res.into_iter())
         .map(|tuple| {
@@ -97,12 +136,10 @@ fn get_hash_branches(repo: &Repository) -> Result<Vec<Branch>, Error> {
             branch
         })
         .filter(|branch| match branch.name() {
-            Ok(Some(name)) => name.starts_with("dura/") && name.split('/').count() == 2,
+            Ok(Some(name)) => predicate(name),
             _ => false,
         })
         .collect();
-
-    sort(&mut ret);
 
     Ok(ret)
 }

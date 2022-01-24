@@ -12,9 +12,9 @@ use crate::git_repo_iter::GitRepoIter;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub enum RebalanceConfig {
+pub enum ConsolidateStrategy {
     /// Aggregate dura branches into fewer branches. Similar to Tree but only rolls up one level.
-    FlatAgg {
+    Flat {
         num_parents: Option<u8>,
         num_uncompressed: Option<u16>,
     },
@@ -25,19 +25,21 @@ pub enum RebalanceConfig {
     },
 }
 
-impl RebalanceConfig {
+impl ConsolidateStrategy {
+    /// Combines 2 instances with overrides. This is used to combine settings from 2 or 3 levels of
+    /// config and CLI options.
     pub fn or(&self, lower_precedence: &Self) -> Self {
         match (self, lower_precedence) {
             (
-                Self::FlatAgg {
+                Self::Flat {
                     num_parents: a_np,
                     num_uncompressed: a_nu,
                 },
-                Self::FlatAgg {
+                Self::Flat {
                     num_parents: b_np,
                     num_uncompressed: b_nu,
                 },
-            ) => Self::FlatAgg {
+            ) => Self::Flat {
                 num_parents: a_np.or(*b_np),
                 num_uncompressed: a_nu.or(*b_nu),
             },
@@ -64,7 +66,7 @@ pub struct WatchConfig {
     pub include: Vec<String>,
     pub exclude: Vec<String>,
     pub max_depth: u8,
-    pub rebalance_strategy: Option<RebalanceConfig>,
+    pub consolidate_strategy: Option<ConsolidateStrategy>,
 }
 
 impl WatchConfig {
@@ -73,7 +75,7 @@ impl WatchConfig {
             include: vec![],
             exclude: vec![],
             max_depth: 255,
-            rebalance_strategy: None,
+            consolidate_strategy: None,
         }
     }
 }
