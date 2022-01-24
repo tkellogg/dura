@@ -1,10 +1,15 @@
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
+use std::io::{stdin, stdout, BufReader, BufWriter, Read, Write};
 use std::path::Path;
+use std::process;
 
-use clap::{arg, App, AppSettings, Arg, Values};
+use clap::{
+    arg, crate_authors, crate_description, crate_name, crate_version, App, AppSettings, Arg,
+};
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
+use dura::metrics;
 use dura::poller;
 use dura::snapshots;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
@@ -13,17 +18,23 @@ use tracing_subscriber::{EnvFilter, Registry};
 
 #[tokio::main]
 async fn main() {
-    let cwd = std::env::current_dir().unwrap();
+    let cwd = std::env::current_dir().expect("Failed to get current directory");
+
+    let suffix = option_env!("DURA_VERSION_SUFFIX")
+        .map(|v| format!(" @ {}", v))
+        .unwrap_or_else(|| String::from(""));
+
+    let version = format!("{}{}", crate_version!(), suffix);
 
     let arg_directory = Arg::new("directory")
         .default_value_os(cwd.as_os_str())
         .help("The directory to watch. Defaults to current directory");
 
-    let matches = App::new("dura")
-        .about("Dura backs up your work automatically via Git commits.")
-        .version("0.1.0")
+    let matches = App::new(crate_name!())
+        .about(crate_description!())
+        .version(version.as_str())
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .author("Tim Kellogg and the Internet")
+        .author(crate_authors!())
         .subcommand(
             App::new("capture")
                 .short_flag('C')
@@ -80,13 +91,37 @@ async fn main() {
                 .long_flag("kill")
                 .about("Stop the running worker (should only be a single worker).")
         )
+        .subcommand(
+            App::new("metrics")
+                .short_flag('M')
+                .long_flag("metrics")
+                .about("Convert logs into richer metrics about snapshots.")
+                .arg(arg!(-i --input)
+                     .required(false)
+                     .takes_value(true)
+                     .help("The log file to read. Defaults to stdin.")
+                 )
+                .arg(arg!(-o --output)
+                     .required(false)
+                     .takes_value(true)
+                     .help("The json file to write. Defaults to stdout.")
+                 )
+        )
         .get_matches();
 
     match matches.subcommand() {
-        Some(("capture", m)) => {
-            let dir = Path::new(m.value_of("directory").unwrap());
-            if let Some(capture_status) = snapshots::capture(dir).unwrap() {
-                println!("{}", serde_json::to_string(&capture_status).unwrap());
+        Some(("capture", arg_matches)) => {
+            let dir = Path::new(arg_matches.value_of("directory").unwrap());
+            match snapshots::capture(dir) {
+                Ok(oid_opt) => {
+                    if let Some(oid) = oid_opt {
+                        println!("{}", oid);
+                    }
+                }
+                Err(e) => {
+                    println!("Dura capture failed: {}", e);
+                    process::exit(1);
+                }
             }
         }
         Some(("serve", arg_matches)) => {
@@ -122,7 +157,6 @@ async fn main() {
                 }
             }
 
-            tracing::info!(pid = std::process::id());
             poller::start().await;
         }
         Some(("watch", arg_matches)) => {
@@ -130,12 +164,12 @@ async fn main() {
 
             let include = arg_matches
                 .values_of("include")
-                .unwrap_or(Values::default())
+                .unwrap_or_default()
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
             let exclude = arg_matches
                 .values_of("exclude")
-                .unwrap_or(Values::default())
+                .unwrap_or_default()
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
             let max_depth = arg_matches
@@ -160,19 +194,47 @@ async fn main() {
         Some(("kill", _)) => {
             kill();
         }
+        Some(("metrics", arg_matches)) => {
+            let mut input: Box<dyn Read> = match arg_matches.value_of("input") {
+                Some(input) => Box::new(
+                    File::open(input).unwrap_or_else(|_| panic!("Couldn't open '{}'", input)),
+                ),
+                None => Box::new(BufReader::new(stdin())),
+            };
+            let mut output: Box<dyn Write> = match arg_matches.value_of("output") {
+                Some(output) => Box::new(
+                    File::open(output).unwrap_or_else(|_| panic!("Couldn't open '{}'", output)),
+                ),
+                None => Box::new(BufWriter::new(stdout())),
+            };
+            if let Err(e) = metrics::get_snapshot_metrics(&mut input, &mut output) {
+                eprintln!("Failed: {}", e);
+                process::exit(1);
+            }
+        }
         _ => unreachable!(),
     }
 }
 
 fn watch_dir(path: &std::path::Path, watch_config: WatchConfig) {
     let mut config = Config::load();
-    config.set_watch(path.to_str().unwrap().to_string(), watch_config);
+    let path = path
+        .to_str()
+        .expect("The provided path is not valid unicode")
+        .to_string();
+
+    config.set_watch(path, watch_config);
     config.save();
 }
 
 fn unwatch_dir(path: &std::path::Path) {
     let mut config = Config::load();
-    config.set_unwatch(path.to_str().unwrap().to_string());
+    let path = path
+        .to_str()
+        .expect("The provided path is not valid unicode")
+        .to_string();
+
+    config.set_unwatch(path);
     config.save();
 }
 

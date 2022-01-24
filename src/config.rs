@@ -96,8 +96,13 @@ impl Config {
         Self::get_dura_config_home().join("config.toml")
     }
 
-    /// Location of all config & database files. By default this is ~/.config/dura but can be
-    /// overridden by setting DURA_CONFIG_HOME environment variable.
+    /// Location of all config. By default
+    ///
+    /// Linux   :   $XDG_CONFIG_HOME/dura or $HOME/.config/dura
+    /// macOS   :   $HOME/Library/Application Support
+    /// Windows :   %AppData%\Roaming\dura
+    ///
+    /// This can be overridden by setting DURA_CONFIG_HOME environment variable.
     fn get_dura_config_home() -> PathBuf {
         // The environment variable lets us run tests independently, but I'm sure someone will come
         // up with another reason to use it.
@@ -134,10 +139,16 @@ impl Config {
     }
 
     pub fn create_dir(path: &Path) {
-        path.parent().map(|dir| create_dir_all(dir).unwrap());
+        if let Some(dir) = path.parent() {
+            create_dir_all(dir)
+                .unwrap_or_else(|_| panic!("Failed to create directory at `{}`.\
+                    Dura stores its configuration in `{}/config.toml`, \
+                    where you can instruct dura to watch patterns of Git repositories, among other things. \
+                    See https://github.com/tkellogg/dura for more information.", dir.display(), path.display()))
+        }
     }
 
-    /// Used by tests to save to a temp dir
+    /// Attempts to create parent dirs, serialize `self` as TOML and write to disk.
     pub fn save_to_path(&self, path: &Path) {
         Self::create_dir(path);
 
@@ -146,7 +157,7 @@ impl Config {
             Err(e) => {
                 println!("Unexpected error when deserializing config: {}", e);
                 return;
-            },
+            }
         };
 
         match fs::write(path, config_string) {
@@ -157,7 +168,9 @@ impl Config {
 
     pub fn set_watch(&mut self, path: String, cfg: WatchConfig) {
         let abs_path = fs::canonicalize(path).expect("The provided path is not a directory");
-        let abs_path = abs_path.to_str().unwrap();
+        let abs_path = abs_path
+            .to_str()
+            .expect("The provided path is not valid unicode");
 
         if self.repos.contains_key(abs_path) {
             println!("{} is already being watched", abs_path)
@@ -169,10 +182,15 @@ impl Config {
 
     pub fn set_unwatch(&mut self, path: String) {
         let abs_path = fs::canonicalize(path).expect("The provided path is not a directory");
-        let abs_path = abs_path.to_str().unwrap().to_string();
+        let abs_path = abs_path
+            .to_str()
+            .expect("The provided path is not valid unicode")
+            .to_string();
 
         match self.repos.remove(&abs_path) {
-            Some(_) => println!("Stopped watching {}", abs_path),
+            Some(_) => {
+                println!("Stopped watching {}", abs_path);
+            }
             None => println!("{} is not being watched", abs_path),
         }
     }

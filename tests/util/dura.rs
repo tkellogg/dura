@@ -1,10 +1,11 @@
-use std::collections::HashSet;
 use std::{
+    collections::HashSet,
     ops, path,
-    process::{Child, Command},
+    process::{Command, Stdio},
     thread, time,
 };
 
+use crate::util::daemon::Daemon;
 use dura::config::Config;
 use dura::database::RuntimeLock;
 use dura::snapshots::CaptureStatus;
@@ -15,8 +16,8 @@ use chrono::Duration;
 /// of scope. This helps us do end-to-end tests where we invoke the executable, possibly multiple
 /// different processes.
 pub struct Dura {
-    primary: Option<Child>,
-    secondary: Option<Child>,
+    pub primary: Option<Daemon>,
+    pub secondary: Option<Daemon>,
     config_dir: tempfile::TempDir,
     cache_dir: tempfile::TempDir,
     counter: i64,
@@ -40,13 +41,14 @@ impl Dura {
             .args(args)
             .env("DURA_CONFIG_HOME", self.config_dir.path())
             .env("DURA_CACHE_HOME", self.cache_dir.path())
+            .stdout(Stdio::piped())
             .spawn()
             .unwrap();
 
         if is_primary {
-            self.primary = Some(child);
+            self.primary = Some(Daemon::new(child));
         } else {
-            self.secondary = Some(child);
+            self.secondary = Some(Daemon::new(child));
         }
     }
 
@@ -99,9 +101,9 @@ impl Dura {
 
     pub fn pid(&self, is_primary: bool) -> Option<u32> {
         if is_primary {
-            self.primary.as_ref().map(|ps| ps.id())
+            self.primary.as_ref().map(|d| d.child.id())
         } else {
-            self.secondary.as_ref().map(|ps| ps.id())
+            self.secondary.as_ref().map(|d| d.child.id())
         }
     }
 
@@ -127,7 +129,6 @@ impl Dura {
     pub fn get_runtime_lock(&self) -> Option<RuntimeLock> {
         println!("$ cat ~/.cache/dura/runtime.db");
         let cfg = RuntimeLock::load_file(self.runtime_lock_path().as_path());
-        println!("{:?}", &cfg);
         cfg.ok()
     }
 
@@ -156,7 +157,7 @@ impl ops::Drop for Dura {
     /// should stay independent and isolated as long as no one is running `ps aux`
     fn drop(&mut self) {
         // don't handle kill errors.
-        let _ = self.primary.as_mut().map(|ps| ps.kill());
-        let _ = self.secondary.as_mut().map(|ps| ps.kill());
+        let _ = self.primary.as_mut().map(|d| d.child.kill());
+        let _ = self.secondary.as_mut().map(|d| d.child.kill());
     }
 }

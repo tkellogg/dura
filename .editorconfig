@@ -17,5 +17,5 @@ indent_size = 4
 # denotes a line break in Markdown
 trim_trailing_whitespace = false
 
-[*.yml]
+[{*.yml, *.yaml, *.nix}]
 indent_size = 2
