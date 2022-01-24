@@ -178,6 +178,6 @@ fn get_child(repo: &GitRepo, oid: Oid, parent: usize) -> Result<Oid, Error> {
 fn get_child_2(repo: &GitRepo, oid: Oid, parent: usize, parent_2: usize) -> Result<Oid, Error> {
     let git = repo.repo();
     let parents: Vec<_> = git.find_commit(oid)?.parents().collect();
-    let parents_2: Vec<_> = git.find_commit(parents[parent].id())?.parents.collect();
+    let parents_2: Vec<_> = git.find_commit(parents[parent].id())?.parents().collect();
     Ok(parents_2[parent_2].id())
 }

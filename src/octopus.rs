@@ -1,7 +1,14 @@
 use std::path::Path;
+use std::ops::Deref;
 use git2::{Error, Repository, BranchType, Branch, Time, Commit, Oid};
 
 use crate::config::RebalanceConfig;
+
+/// Maximum recursion level when running the tree builder algorithm. This limits to the number of
+/// branches that can be summarized to 2**n worst case, it's actually num_parents**n. So n==16
+/// means at least 65,536 branches can be summarized. This is insanely high, and can be made much
+/// higher by increasing num_parents. No one should be running into this limit.
+const MAX_TREE_HEIGHT: usize = 16;
 
 /// Create or rebalance the octo-tree cold history.
 pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<Vec<Oid>, Error> {
@@ -14,7 +21,7 @@ pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<Vec<Oid>,
 
     match config {
         RebalanceConfig::FlatAgg{ num_parents, num_uncompressed } => {
-            match get_args(*num_parents, *num_uncompressed, parents) {
+            match get_args(*num_parents, *num_uncompressed, &parents[..]) {
                 Some((num_parents, commits)) => {
                     Ok(build_tree(&repo, commits, num_parents)?)
                 }
@@ -22,13 +29,19 @@ pub fn rebalance(repo_path: &Path, config: &RebalanceConfig) -> Result<Vec<Oid>,
             }
         }
         RebalanceConfig::Tree{ num_parents, num_uncompressed } => {
-            match get_args(*num_parents, *num_uncompressed, parents) {
+            match get_args(*num_parents, *num_uncompressed, &parents[..]) {
                 Some((num_parents, commits)) => {
-                    let mut last_pass: Vec<Commit> = commits.iter().map(|x| *x.clone()).collect();
+                    let mut last_pass: Vec<Commit> = commits.iter().map(|x| x.deref().clone()).collect();
+                    let mut num_levels_processed = 0;
                     loop {
+                        num_levels_processed += 1;
+                        if num_levels_processed >= MAX_TREE_HEIGHT {
+                            panic!("Max level of recursion reached: {}", num_levels_processed);
+                        }
+
                         // parents[0] is the newest
-                        let last_pass_oids = build_tree(&repo, to_refs(&last_pass), num_parents)?;
-                        if last_pass_oids.len() > 0 {
+                        let last_pass_oids = build_tree(&repo, &to_refs(&last_pass)[..], num_parents)?;
+                        if last_pass_oids.len() > 1 {
                             last_pass = last_pass_oids.iter()
                                 .flat_map(|oid| repo.find_commit(*oid).ok())
                                 .collect();
@@ -58,11 +71,10 @@ fn get_args<'a, T>(num_parents: Option<u8>, num_uncompressed: Option<u16>, paren
 }
 
 /// I couldn't find this in std:: probably because the lifetime makes it awkward to use
-fn to_refs<'a, T>(vec: &'a Vec<T>) -> &'a [&'a T] {
-    let refs: Vec<_> = vec.iter()
+fn to_refs<'a, T>(vec: &'a Vec<T>) -> Vec<&'a T> {
+    vec.iter()
         .map(|item| item)
-        .collect();
-    &refs[..]
+        .collect()
 }
 
 fn get_hash_branches(repo: &Repository) -> Result<Vec<Branch>, Error> {
