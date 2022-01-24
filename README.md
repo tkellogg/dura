@@ -115,6 +115,10 @@ to develop:
 nix develop github:tkellogg/dura
 ```
 
+### Cargo Install
+1. Install Cargo
+2. Run `cargo install dura`
+
 ### By Source
 
 1. Install Rust (e.g., `brew install rustup && brew install rust`)
