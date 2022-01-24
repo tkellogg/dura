@@ -1,4 +1,5 @@
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
+use std::io::{stdin, stdout, BufReader, BufWriter, Read, Write};
 use std::path::Path;
 use std::process;
 
@@ -8,6 +9,7 @@ use clap::{
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
+use dura::metrics;
 use dura::poller;
 use dura::snapshots;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
@@ -88,6 +90,22 @@ async fn main() {
                 .short_flag('K')
                 .long_flag("kill")
                 .about("Stop the running worker (should only be a single worker).")
+        )
+        .subcommand(
+            App::new("metrics")
+                .short_flag('M')
+                .long_flag("metrics")
+                .about("Convert logs into richer metrics about snapshots.")
+                .arg(arg!(-i --input)
+                     .required(false)
+                     .takes_value(true)
+                     .help("The log file to read. Defaults to stdin.")
+                 )
+                .arg(arg!(-o --output)
+                     .required(false)
+                     .takes_value(true)
+                     .help("The json file to write. Defaults to stdout.")
+                 )
         )
         .get_matches();
 
@@ -174,6 +192,24 @@ async fn main() {
         }
         Some(("kill", _)) => {
             kill();
+        }
+        Some(("metrics", arg_matches)) => {
+            let mut input: Box<dyn Read> = match arg_matches.value_of("input") {
+                Some(input) => Box::new(
+                    File::open(input).unwrap_or_else(|_| panic!("Couldn't open '{}'", input)),
+                ),
+                None => Box::new(BufReader::new(stdin())),
+            };
+            let mut output: Box<dyn Write> = match arg_matches.value_of("output") {
+                Some(output) => Box::new(
+                    File::open(output).unwrap_or_else(|_| panic!("Couldn't open '{}'", output)),
+                ),
+                None => Box::new(BufWriter::new(stdout())),
+            };
+            if let Err(e) = metrics::get_snapshot_metrics(&mut input, &mut output) {
+                eprintln!("Failed: {}", e);
+                process::exit(1);
+            }
         }
         _ => unreachable!(),
     }
