@@ -1,7 +1,7 @@
-use std::{fs, path, process::Command};
-use git2::Repository;
 use chrono::prelude::Utc;
 use chrono::Duration;
+use git2::Repository;
+use std::{fs, path, process::Command};
 
 /// A test utility to make our tests more readable
 pub struct GitRepo {
@@ -86,9 +86,15 @@ impl GitRepo {
         self.git(&["status"]).unwrap();
         // We disable gpg signing to avoid interfering with local global
         // ~/.gitconfig file, if any.
-        self.git(&["commit", "--no-gpg-sign", "-m", "test", 
-                 "--date", format!("{}", timestamp.format("%+")).as_str()])
-            .unwrap();
+        self.git(&[
+            "commit",
+            "--no-gpg-sign",
+            "-m",
+            "test",
+            "--date",
+            format!("{}", timestamp.format("%+")).as_str(),
+        ])
+        .unwrap();
     }
 
     pub fn write_file(&self, path: &str) {

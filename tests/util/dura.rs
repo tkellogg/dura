@@ -6,11 +6,11 @@ use std::{
 };
 
 use crate::util::daemon::Daemon;
+use chrono::prelude::{DateTime, Utc};
+use chrono::Duration;
 use dura::config::Config;
 use dura::database::RuntimeLock;
 use dura::snapshots::CaptureStatus;
-use chrono::prelude::{Utc, DateTime};
-use chrono::Duration;
 
 /// Utility to start dura asynchronously (e.g. dura serve) and kill the process when this goes out
 /// of scope. This helps us do end-to-end tests where we invoke the executable, possibly multiple
@@ -61,7 +61,12 @@ impl Dura {
     }
 
     /// Run, but with all available options
-    pub fn run_main(&self, args: &[&str], dir: Option<&path::Path>, date: Option<DateTime<Utc>>) -> Option<String> {
+    pub fn run_main(
+        &self,
+        args: &[&str],
+        dir: Option<&path::Path>,
+        date: Option<DateTime<Utc>>,
+    ) -> Option<String> {
         println!("$ dura {}", args.join(" "));
         let date = date.unwrap_or(Utc::now());
         let exe = env!("CARGO_BIN_EXE_dura").to_string();
@@ -69,7 +74,10 @@ impl Dura {
             .args(args)
             .env("DURA_CONFIG_HOME", self.config_dir.path())
             .env("DURA_CACHE_HOME", self.cache_dir.path())
-            .env("GIT_COMMITTER_DATE", format!("{}", date.format("%+")).as_str())
+            .env(
+                "GIT_COMMITTER_DATE",
+                format!("{}", date.format("%+")).as_str(),
+            )
             .current_dir(dir.unwrap_or(self.config_dir.path()))
             .output();
 

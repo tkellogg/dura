@@ -1,8 +1,8 @@
 use chrono::DateTime;
 use git2::{BranchType, DiffOptions, Error, IndexAddOption, Repository, Signature, Time};
 use serde::{Deserialize, Serialize};
-use std::{fmt, env};
 use std::path::Path;
+use std::{env, fmt};
 
 use crate::config::Config;
 
@@ -74,9 +74,7 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
     }
 
     let committer = match env::var("GIT_COMMITTER_DATE") {
-        Err(_) => {
-            Signature::now(&get_git_author(&repo), &get_git_email(&repo))?
-        }
+        Err(_) => Signature::now(&get_git_author(&repo), &get_git_email(&repo))?,
         Ok(date_str) => {
             let chrono_time = DateTime::parse_from_rfc3339(date_str.as_str())
                 .or_else(|_| DateTime::parse_from_rfc2822(date_str.as_str()))
