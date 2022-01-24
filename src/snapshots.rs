@@ -1,5 +1,5 @@
 use chrono::DateTime;
-use git2::{BranchType, Commit, DiffOptions, Error, IndexAddOption, Repository, Signature, Time};
+use git2::{BranchType, DiffOptions, Error, IndexAddOption, Repository, Signature, Time};
 use serde::{Deserialize, Serialize};
 use std::{fmt, env};
 use std::path::Path;

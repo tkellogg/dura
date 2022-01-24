@@ -84,7 +84,6 @@ impl GitRepo {
 
         self.git(&["add", "."]).unwrap();
         self.git(&["status"]).unwrap();
-        self.git(&["commit", "-m", "test", "--date", format!("{}", timestamp.format("%+")).as_str()]).unwrap();
         // We disable gpg signing to avoid interfering with local global
         // ~/.gitconfig file, if any.
         self.git(&["commit", "--no-gpg-sign", "-m", "test", 

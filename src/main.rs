@@ -113,9 +113,9 @@ async fn main() {
         Some(("capture", arg_matches)) => {
             let dir = Path::new(arg_matches.value_of("directory").unwrap());
             match snapshots::capture(dir) {
-                Ok(oid_opt) => {
-                    if let Some(oid) = oid_opt {
-                        println!("{}", oid);
+                Ok(capture_status_opt) => {
+                    if let Some(capture_status) = capture_status_opt {
+                        println!("{}", serde_json::to_string(&capture_status).unwrap());
                     }
                 }
                 Err(e) => {
