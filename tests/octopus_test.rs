@@ -42,6 +42,10 @@ fn octopus_initial_pass() {
         branches[3].commit_hash,
         get_child(&repo, octos[0], 0).unwrap().to_string()
     );
+
+    let git = repo.repo();
+    let tags = octopus::get_flat_tags(&git).unwrap();
+    assert_eq!(tags.len(), 2);
 }
 
 /// When num_uncompressed == 1, an extra commit is not added to the tree
