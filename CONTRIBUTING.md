@@ -3,7 +3,7 @@
 # Pull request process
 1. Discuss changes before starting. This helps avoid awkward situations, like where something has already been tried or isn't feasible for a non-obvious reason.
 2. Add tests, if possible
-    * [`end_to_end_test.rs`](https://github.com/tkellogg/dura/blob/master/tests/end_to_end_test.rs) is a good place to test out new functionality, and the test code reads fairly well.
+    * [`startup_test.rs`](https://github.com/tkellogg/dura/blob/master/tests/startup_test.rs) is a good place to test out new functionality, and the test code reads fairly well.
     * Unit tests are preferred, when feasible. They go inside source files.
 3. Run `$ ./scripts/pre-commit.sh` before pushing. This does almost everything that happens in CI, just faster.
 4. Explain the behavior as best as possible. Things like screenshots and GIFs can be helpful when it's visual.
