@@ -90,16 +90,16 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
     }))
 }
 
-pub fn get_committer<'a>(repo: &'a Repository) -> Result<Signature<'a>, Error> {
+pub fn get_committer(repo: &Repository) -> Result<Signature, Error> {
     match env::var("GIT_COMMITTER_DATE") {
-        Err(_) => Signature::now(&get_git_author(&repo), &get_git_email(&repo)),
+        Err(_) => Signature::now(&get_git_author(repo), &get_git_email(repo)),
         Ok(date_str) => {
             let chrono_time = DateTime::parse_from_rfc3339(date_str.as_str())
                 .or_else(|_| DateTime::parse_from_rfc2822(date_str.as_str()))
                 .unwrap();
             let offset = chrono_time.timezone().local_minus_utc();
             let time = Time::new(chrono_time.timestamp(), offset);
-            Signature::new(&get_git_author(&repo), &get_git_email(&repo), &time)
+            Signature::new(&get_git_author(repo), &get_git_email(repo), &time)
         }
     }
 }
