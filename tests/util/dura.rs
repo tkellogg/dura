@@ -68,7 +68,7 @@ impl Dura {
         date: Option<DateTime<Utc>>,
     ) -> Option<String> {
         println!("$ dura {}", args.join(" "));
-        let date = date.unwrap_or(Utc::now());
+        let date = date.unwrap_or_else(Utc::now);
         let exe = env!("CARGO_BIN_EXE_dura").to_string();
         let child_proc = Command::new(exe)
             .args(args)
@@ -78,7 +78,7 @@ impl Dura {
                 "GIT_COMMITTER_DATE",
                 format!("{}", date.format("%+")).as_str(),
             )
-            .current_dir(dir.unwrap_or(self.config_dir.path()))
+            .current_dir(dir.unwrap_or_else(|| self.config_dir.path()))
             .output();
 
         if let Ok(output) = child_proc {
