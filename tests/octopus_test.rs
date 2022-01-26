@@ -46,6 +46,22 @@ fn octopus_initial_pass() {
     let git = repo.repo();
     let tags = octopus::get_flat_tags(&git).unwrap();
     assert_eq!(tags.len(), 2);
+    assert_eq!(
+        git.find_reference("refs/tags/dura/cold/1")
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .id(),
+        octos[1],
+    );
+    assert_eq!(
+        git.find_reference("refs/tags/dura/cold/2")
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .id(),
+        octos[0],
+    );
 }
 
 /// When num_uncompressed == 1, an extra commit is not added to the tree
@@ -84,6 +100,26 @@ fn num_uncompressed_eq_1() {
     assert_eq!(
         branches[3].commit_hash,
         get_child(&repo, octos[0], 0).unwrap().to_string()
+    );
+
+    let git = repo.repo();
+    let tags = octopus::get_flat_tags(&git).unwrap();
+    assert_eq!(tags.len(), 2);
+    assert_eq!(
+        git.find_reference("refs/tags/dura/cold/1")
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .id(),
+        octos[1],
+    );
+    assert_eq!(
+        git.find_reference("refs/tags/dura/cold/2")
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .id(),
+        octos[0],
     );
 }
 
@@ -248,6 +284,16 @@ fn tree_2_levels() {
     assert_eq!(
         branches[3].commit_hash,
         get_child_2(&repo, octos[0], 0, 0).unwrap().to_string()
+    );
+
+    let git = repo.repo();
+    assert_eq!(
+        git.find_reference("refs/tags/dura/cold")
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .id(),
+        octos[0],
     );
 }
 

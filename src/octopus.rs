@@ -54,25 +54,7 @@ pub fn consolidate(repo_path: &Path, config: &ConsolidateStrategy) -> Result<Vec
                 None => vec![],
             };
 
-            let mut max_cold_index = repo
-                .tag_names(Some("dura/cold/*"))?
-                .iter()
-                .flatten()
-                .flat_map(|tag| tag.parse::<usize>().ok())
-                .max()
-                .unwrap_or(0);
-
-            let committer = snapshots::get_committer(&repo)?;
-            for commit in res.iter().rev() {
-                max_cold_index += 1;
-                repo.tag(
-                    format!("dura/cold/{}", max_cold_index).as_str(),
-                    repo.find_commit(*commit)?.as_object(),
-                    &committer,
-                    "dura cold storage",
-                    false,
-                )?;
-            }
+            tag_flat_nodes(&repo, &res[..])?;
 
             Ok(res)
         }
@@ -81,6 +63,7 @@ pub fn consolidate(repo_path: &Path, config: &ConsolidateStrategy) -> Result<Vec
             num_parents,
             num_uncompressed,
         } => {
+            let mut last_pass_oids: Vec<Oid> = vec![];
             match get_args(*num_parents, *num_uncompressed, &parents[..]) {
                 Some((num_parents, commits)) => {
                     let mut last_pass: Vec<Commit> =
@@ -93,22 +76,64 @@ pub fn consolidate(repo_path: &Path, config: &ConsolidateStrategy) -> Result<Vec
                         }
 
                         // parents[0] is the newest
-                        let last_pass_oids =
-                            build_tree(&repo, &to_refs(&last_pass)[..], num_parents)?;
+                        last_pass_oids = build_tree(&repo, &to_refs(&last_pass)[..], num_parents)?;
                         if last_pass_oids.len() > 1 {
                             last_pass = last_pass_oids
                                 .iter()
                                 .flat_map(|oid| repo.find_commit(*oid).ok())
                                 .collect();
                         } else {
-                            return Ok(last_pass_oids);
+                            break;
                         }
                     }
+
+                    tag_tree_node(&repo, &last_pass_oids[..])?;
+
+                    Ok(last_pass_oids)
                 }
-                None => Ok(vec![]),
+                None => Ok(last_pass_oids),
             }
         }
     }
+}
+
+fn tag_flat_nodes(repo: &Repository, res: &[Oid]) -> Result<(), Error> {
+    let mut max_cold_index = repo
+        .tag_names(Some("dura/cold/*"))?
+        .iter()
+        .flatten()
+        .flat_map(|tag| tag.parse::<usize>().ok())
+        .max()
+        .unwrap_or(0);
+
+    let committer = snapshots::get_committer(repo)?;
+    for commit in res.iter().rev() {
+        max_cold_index += 1;
+        repo.tag(
+            format!("dura/cold/{}", max_cold_index).as_str(),
+            repo.find_commit(*commit)?.as_object(),
+            &committer,
+            "dura cold storage",
+            true,
+        )?;
+    }
+
+    Ok(())
+}
+
+fn tag_tree_node(repo: &Repository, res: &[Oid]) -> Result<(), Error> {
+    if let Some(oid) = res.get(0) {
+        let committer = snapshots::get_committer(repo)?;
+
+        repo.tag(
+            "dura/cold",
+            repo.find_commit(*oid)?.as_object(),
+            &committer,
+            "dura cold storage",
+            true,
+        )?;
+    }
+    Ok(())
 }
 
 fn get_args<'a, T>(
