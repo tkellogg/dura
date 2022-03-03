@@ -81,7 +81,7 @@ fn test_commit_signature_using_dura_config() {
     repo.set_config("user.name", "git-author");
     repo.set_config("user.email", "git@someemail.com");
 
-    env::set_var("DURA_CONFIG_HOME", tmp.path().to_path_buf());
+    env::set_var("DURA_CONFIG_HOME", tmp.path());
     let mut dura_config = Config::empty();
     dura_config.commit_author = Some("dura-config".to_string());
     dura_config.commit_email = Some("dura-config@email.com".to_string());
@@ -109,7 +109,7 @@ fn test_commit_signature_using_git_config() {
     repo.set_config("user.name", "git-author");
     repo.set_config("user.email", "git@someemail.com");
 
-    env::set_var("DURA_CONFIG_HOME", tmp.path().to_path_buf());
+    env::set_var("DURA_CONFIG_HOME", tmp.path());
     let dura_config = Config::empty();
     dura_config.save();
 
@@ -139,7 +139,7 @@ fn test_commit_signature_exclude_git_config() {
     repo.set_config("user.name", "git-author");
     repo.set_config("user.email", "git@someemail.com");
 
-    env::set_var("DURA_CONFIG_HOME", tmp.path().to_path_buf());
+    env::set_var("DURA_CONFIG_HOME", tmp.path());
     let mut dura_config = Config::empty();
     dura_config.commit_exclude_git_config = true;
     dura_config.save();
