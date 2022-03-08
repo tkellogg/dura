@@ -7,7 +7,7 @@ description = "Dura backs up your work automatically via Git commits."
 license = "Apache-2.0"
 
 [dependencies]
-clap = { version = "3.0.5", features = ["cargo"] }
+clap = { version = "3.1.6", features = ["cargo"] }
 git2 = "0.13"
 dirs = "4.0.0"
 tokio = { version = "1", features = ["full"] }
