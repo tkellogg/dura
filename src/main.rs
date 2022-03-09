@@ -3,9 +3,7 @@ use std::io::{stdin, stdout, BufReader, BufWriter, Read, Write};
 use std::path::Path;
 use std::process;
 
-use clap::{
-    arg, crate_authors, crate_description, crate_name, crate_version, Arg, Command,
-};
+use clap::{arg, crate_authors, crate_description, crate_name, crate_version, Arg, Command};
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
