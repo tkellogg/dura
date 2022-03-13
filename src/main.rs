@@ -3,9 +3,7 @@ use std::io::{stdin, stdout, BufReader, BufWriter, Read, Write};
 use std::path::Path;
 use std::process;
 
-use clap::{
-    arg, crate_authors, crate_description, crate_name, crate_version, App, AppSettings, Arg,
-};
+use clap::{arg, crate_authors, crate_description, crate_name, crate_version, Arg, Command};
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
@@ -30,20 +28,21 @@ async fn main() {
         .default_value_os(cwd.as_os_str())
         .help("The directory to watch. Defaults to current directory");
 
-    let matches = App::new(crate_name!())
+    let matches = Command::new(crate_name!())
         .about(crate_description!())
         .version(version.as_str())
-        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .subcommand_required(true)
+        .arg_required_else_help(true)
         .author(crate_authors!())
         .subcommand(
-            App::new("capture")
+            Command::new("capture")
                 .short_flag('C')
                 .long_flag("capture")
                 .about("Run a single backup of an entire repository. This is the one single iteration of the `serve` control loop.")
                 .arg(arg_directory.clone())
         )
         .subcommand(
-            App::new("serve")
+            Command::new("serve")
                 .short_flag('S')
                 .long_flag("serve")
                 .about("Starts the worker that listens for file changes. If another process is already running, this will do it's best to terminate the other process.")
@@ -53,7 +52,7 @@ async fn main() {
                     .help("Sets custom logfile. Default is logging to stdout")
         ))
         .subcommand(
-            App::new("watch")
+            Command::new("watch")
                 .short_flag('W')
                 .long_flag("watch")
                 .about("Add the current working directory as a repository to watch.")
@@ -61,15 +60,15 @@ async fn main() {
                 .arg(arg!(-i --include)
                     .required(false)
                     .takes_value(true)
-                    .use_delimiter(true)
-                    .require_delimiter(true)
+                    .use_value_delimiter(true)
+                    .require_value_delimiter(true)
                     .help("Overrides excludes by re-including specific directories relative to the watch directory.")
                 )
                 .arg(arg!(-e --exclude)
                     .required(false)
                     .takes_value(true)
-                    .use_delimiter(true)
-                    .require_delimiter(true)
+                    .use_value_delimiter(true)
+                    .require_value_delimiter(true)
                     .help("Excludes specific directories relative to the watch directory")
                 )
                 .arg(arg!(-d --maxdepth)
@@ -79,20 +78,20 @@ async fn main() {
                 )
         )
         .subcommand(
-            App::new("unwatch")
+            Command::new("unwatch")
                 .short_flag('U')
                 .long_flag("unwatch")
                 .about("Missing description")
                 .arg(arg_directory)
         )
         .subcommand(
-            App::new("kill")
+            Command::new("kill")
                 .short_flag('K')
                 .long_flag("kill")
                 .about("Stop the running worker (should only be a single worker).")
         )
         .subcommand(
-            App::new("metrics")
+            Command::new("metrics")
                 .short_flag('M')
                 .long_flag("metrics")
                 .about("Convert logs into richer metrics about snapshots.")
