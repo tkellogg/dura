@@ -117,7 +117,7 @@ nix develop github:tkellogg/dura
 
 ### Cargo Install
 1. Install Cargo
-2. Run `cargo install dura`
+If you want run release version, type ```cargo install dura``` else type ```cargo install --git https://github.com/tkellogg/dura```
 
 ### By Source
 
