@@ -1,6 +1,8 @@
-use git2::{Branch, BranchType, Commit, Error, Oid, Repository, Tag, Time};
+use git2::{Branch, BranchType, Commit, Error, Oid, Repository, Tag, Time, Reference};
 use std::ops::Deref;
 use std::path::Path;
+use std::cmp::min;
+use std::collections::HashSet;
 
 use crate::config::ConsolidateStrategy;
 use crate::snapshots;
@@ -49,12 +51,29 @@ pub fn consolidate(repo_path: &Path, config: &ConsolidateStrategy) -> Result<Vec
             num_parents,
             num_uncompressed,
         } => {
+            let mut to_remove = vec![];
+            let mut has_excess = false;
             let res = match get_args(*num_parents, *num_uncompressed, &parents[..]) {
-                Some((num_parents, commits)) => build_tree(&repo, commits, num_parents)?,
+                Some((num_parents, commits)) => {
+                    to_remove.extend(commits.iter().map(|c| c.id()));
+                    let excess = match get_max_flat_node_index(&repo) {
+                        Ok(max_index) => {
+                            let branch_name = get_flat_branch_name(max_index);
+                            let commit = repo.resolve_reference_from_short_name(
+                                branch_name.as_str())?.peel_to_commit()?;
+                            has_excess = true;
+                            Some(commit)
+                        }
+                        Err(_) => None
+                    };
+                    build_tree(&repo, commits, num_parents, excess)?
+                }
                 None => vec![],
             };
 
-            tag_flat_nodes(&repo, &res[..])?;
+            dbg!(res.len());
+            tag_flat_nodes(&repo, &res[..], has_excess)?;
+            delete_branches(&repo, &to_remove[..])?;
 
             Ok(res)
         }
@@ -76,7 +95,7 @@ pub fn consolidate(repo_path: &Path, config: &ConsolidateStrategy) -> Result<Vec
                         }
 
                         // parents[0] is the newest
-                        last_pass_oids = build_tree(&repo, &to_refs(&last_pass)[..], num_parents)?;
+                        last_pass_oids = build_tree(&repo, &to_refs(&last_pass)[..], num_parents, None)?;
                         if last_pass_oids.len() > 1 {
                             last_pass = last_pass_oids
                                 .iter()
@@ -97,20 +116,19 @@ pub fn consolidate(repo_path: &Path, config: &ConsolidateStrategy) -> Result<Vec
     }
 }
 
-fn tag_flat_nodes(repo: &Repository, res: &[Oid]) -> Result<(), Error> {
-    let mut max_cold_index = repo
-        .tag_names(Some("dura/cold/*"))?
-        .iter()
-        .flatten()
-        .flat_map(|tag| tag.parse::<usize>().ok())
-        .max()
-        .unwrap_or(0);
+fn tag_flat_nodes(repo: &Repository, res: &[Oid], has_excess: bool) -> Result<(), Error> {
+    let mut max_cold_index = get_max_flat_node_index(repo).unwrap_or(0);
+
+    if max_cold_index > 0 && has_excess {
+        // We won't overwrite the last commit if we don't rollback like this.
+        max_cold_index -= 1;
+    }
 
     let committer = snapshots::get_committer(repo)?;
     for commit in res.iter().rev() {
         max_cold_index += 1;
         repo.tag(
-            format!("dura/cold/{}", max_cold_index).as_str(),
+            get_flat_branch_name(max_cold_index).as_str(),
             repo.find_commit(*commit)?.as_object(),
             &committer,
             "dura cold storage",
@@ -119,6 +137,21 @@ fn tag_flat_nodes(repo: &Repository, res: &[Oid]) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+fn get_max_flat_node_index(repo: &Repository) -> Result<usize, Error> {
+    repo
+        .tag_names(Some("dura/cold/*"))?
+        .iter()
+        .flatten()
+        .flat_map(|tag| tag.split("/").nth(2))
+        .flat_map(|tag| tag.parse::<usize>().ok())
+        .max()
+        .ok_or(Error::from_str("No existing cold dura branches found ('dura/cold/*')"))
+}
+
+fn get_flat_branch_name(index: usize) -> String {
+    format!("dura/cold/{}", index)
 }
 
 fn tag_tree_node(repo: &Repository, res: &[Oid]) -> Result<(), Error> {
@@ -132,6 +165,23 @@ fn tag_tree_node(repo: &Repository, res: &[Oid]) -> Result<(), Error> {
             "dura cold storage",
             true,
         )?;
+    }
+    Ok(())
+}
+
+fn get_branches_for_commits<'a>(repo: &'a Repository, commits: &'a [Oid]) -> Result<Vec<Reference<'a>>, Error> {
+    let oids: HashSet<_> = commits.iter().collect();
+    let ret = repo.references_glob("refs/heads/dura/*")?
+        .flatten()
+        .filter(|r| r.is_branch())
+        .filter(|r| r.peel_to_commit().map(|c| oids.contains(&c.id())).unwrap_or(false))
+        .collect();
+    Ok(ret)
+}
+
+fn delete_branches(repo: &Repository, commits: &[Oid]) -> Result<(), Error> {
+    for mut branch in get_branches_for_commits(repo, commits)? {
+        branch.delete()?;
     }
     Ok(())
 }
@@ -230,6 +280,21 @@ fn sort(branches: &mut Vec<Branch>) {
     });
 }
 
+/// Groups commits together into a smaller number of merge commits.
+///
+/// **parent_commits** — the input list of commits to group. The caller is responsible for
+/// finding these. Often they're snapshot branches, but they could also be intermediate commits
+/// from building a tree.
+///
+/// **num_parents** — kinda non-intuitive wording, but it aligns to Git terminology. This is
+/// the number of commits that are grouped together per merge commit. 
+///
+/// **excess_bucket** — a merge commit with potentially <=num_parents parents. The excess space
+/// will be filled on this commit first before the other commits. A Oid representing this commit
+/// will be returned (either literally this Oid, if nothing was added, or a new Oid).
+///
+/// Trivia: when num_parents>2, it's called an octopus commit.
+///
 /// Build a single layer of a tree. We're still not sure what we want out of a branch compaction
 /// routine, so this is flexible enough to serve 2 use cases — a smaller amount of flat
 /// "octopuses" (merge commits with >2 parents) or a hierarchical "B-tree" (merge commits
@@ -238,28 +303,67 @@ fn build_tree<'a>(
     repo: &'a Repository,
     parent_commits: &[&'a Commit],
     num_parents: u8,
+    excess_bucket: Option<Commit>,
 ) -> Result<Vec<Oid>, Error> {
     let mut ret: Vec<Oid> = Vec::new();
+    let mut excess_oid = None;
+    // parent_commits[0] is newest commit
+
+    // fill excess first.
+    if let Some(ref excess) = excess_bucket {
+        dbg!(&excess, excess.parents().collect::<Vec<_>>());
+        let num_excess = min(num_parents as i64 - excess.parents().len() as i64, parent_commits.len() as i64);
+        if num_excess > 0 {
+            let excess_parents = &parent_commits[parent_commits.len()-(num_excess as usize)..];
+            let mut parent_set: Vec<_> = excess_parents.iter().map(|x| *x).collect();
+            // this little dance seems to resolve lifetime issues
+            let cloned: Vec<_> = excess.parents().map(|x| x.clone()).collect();
+            parent_set.append(&mut cloned.iter().map(|x| x).collect());
+
+            // re-do the commit
+            let oid = make_compacted_commit(repo, &parent_set[..])?;
+            println!("Added commits to existing branch; old_hash: {:?}, new_hash: {:?}",
+                     &excess.id(), oid);
+
+            excess_oid = Some(oid);
+        }
+    }
+
+    // We want to do chunks over parent_commits, but .chunks() leaves the "extras" for the final
+    // chunk. That doesn't work because the last chunk is the oldest chunk, so should be full. We
+    // do this dance here to manually process teh first chunk, only if not full.
+    let unfinished_size = parent_commits.len() % num_parents as usize;
+    if unfinished_size > 0 {
+        ret.push(make_compacted_commit(repo, &parent_commits[0..unfinished_size])?)
+    }
 
     // parents[0] is the newest
-    for parents in parent_commits.chunks(num_parents.into()) {
+    for parents in parent_commits[unfinished_size..].chunks(num_parents.into()) {
         if parents.is_empty() {
             break;
         }
 
-        let message = "dura compacted commit";
+        ret.push(make_compacted_commit(repo, parents)?);
+    }
 
-        let oid = repo.commit(
-            None,
-            &parents[0].author(),
-            &parents[0].committer(),
-            message,
-            &parents[0].tree()?,
-            parents,
-        )?;
-
+    // it'd oldest, so it has to be pushed last
+    if let Some(oid) = excess_oid {
         ret.push(oid);
     }
 
     Ok(ret)
+}
+
+fn make_compacted_commit(repo: &Repository, parents: &[&Commit]) -> Result<Oid, Error> {
+    let message = "dura compacted commit";
+
+    let oid = repo.commit(
+        None,
+        &parents[0].author(),
+        &parents[0].committer(),
+        message,
+        &parents[0].tree()?,
+        parents,
+    )?;
+    Ok(oid)
 }

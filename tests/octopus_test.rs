@@ -201,7 +201,7 @@ fn num_uncompressed_eq_2() {
     );
 }
 
-/// When num_uncompressed == 3, the extra commit is added to an octopus
+/// Very wide Flat strategy
 ///
 ///
 ///       *
@@ -246,7 +246,7 @@ fn num_parents_eq_5_num_uncompressed_eq_0() {
     );
 }
 
-/// When num_uncompressed == 3, the extra commit is added to an octopus
+/// Tree strategy
 ///       *
 ///     /  \
 ///    /    \
@@ -294,6 +294,62 @@ fn tree_2_levels() {
             .unwrap()
             .id(),
         octos[0],
+    );
+}
+
+/// Secondary compact – add a branch to complete the tree
+///    *         *
+///      \     /   \
+/// +      *  *     *
+#[test]
+fn flat_secondary_compact() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = GitRepo::new(tmp.path().to_path_buf());
+    repo.init();
+    let mut dura = Dura::new();
+    let branches_1 = create_n_branches(&mut repo, &mut dura, 3);
+
+    let cfg = ConsolidateStrategy::Flat {
+        num_parents: Some(2),
+        num_uncompressed: Some(0),
+    };
+    octopus::consolidate(tmp.path(), &cfg).unwrap();
+    let branches_2 = create_n_branches(&mut repo, &mut dura, 1);
+    println!("consolidate");
+    octopus::consolidate(tmp.path(), &cfg).unwrap();
+
+    let git = repo.repo();
+    let tags = octopus::get_flat_tags(&git).unwrap();
+    assert_eq!(tags.len(), 2);
+    let tags = vec![
+        git.find_reference("refs/tags/dura/cold/1")
+            .unwrap()
+            .peel_to_commit()
+            .unwrap(),
+        git.find_reference("refs/tags/dura/cold/2")
+            .unwrap()
+            .peel_to_commit()
+            .unwrap(),
+    ];
+
+    dbg!(&branches_1, &tags[0].parents().collect::<Vec<_>>(), &tags[1].parents().collect::<Vec<_>>());
+    // branches[0] is the oldest
+    assert_eq!(
+        branches_1[0].commit_hash,
+        get_child(&repo, tags[0].id(), 1).unwrap().to_string()
+    );
+    assert_eq!(
+        branches_1[1].commit_hash,
+        get_child(&repo, tags[0].id(), 0).unwrap().to_string()
+    );
+    assert_eq!(
+        branches_1[2].commit_hash,
+        get_child(&repo, tags[1].id(), 1).unwrap().to_string()
+    );
+    dbg!(&branches_2[0]);
+    assert_eq!(
+        branches_2[0].commit_hash,
+        get_child(&repo, tags[1].id(), 0).unwrap().to_string()
     );
 }
 
