@@ -1,10 +1,13 @@
 [package]
 name = "dura"
-version = "0.2.0-snapshot"
+version = "0.2.0"
 edition = "2021"
 authors = ["Tim Kellogg and the Internet"]
 description = "Dura backs up your work automatically via Git commits."
 license = "Apache-2.0"
+homepage = "https://github.com/tkellogg/dura/"
+repository = "https://github.com/tkellogg/dura/"
+documentation = "https://github.com/tkellogg/dura/blob/master/README.md"
 
 [dependencies]
 clap = { version = "3.1.6", features = ["cargo"] }
