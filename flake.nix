@@ -21,7 +21,7 @@
         dura = pkgs.rustPlatform.buildRustPackage {
           pname = "dura";
           version = "${shortRev}";
-          description = "A background process that saves uncommited changes on git";
+          description = "A background process that saves uncommitted changes on git";
 
           src = self;
 

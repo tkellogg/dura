@@ -7,7 +7,7 @@ use std::time::Duration;
 
 /// Main-thread side of a process watcher. The process that's launched is exposed as messages
 /// (per-line) over a mpsc channel. This is intended to simplify, speed up, and generally make the
-/// tests more reliable when they dispatch asynchronously to `dura serve`. However, nothing abot
+/// tests more reliable when they dispatch asynchronously to `dura serve`. However, nothing about
 /// this is intended to be specific to dura.
 pub struct Daemon {
     mailbox: Receiver<Option<String>>,
