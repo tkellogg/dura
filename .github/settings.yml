@@ -1,57 +1,57 @@
 # https://github.com/probot/settings
 
 branches:
-    - name: master
-      protection:
-          enforce_admins: false
-          required_pull_request_reviews:
-              dismiss_stale_reviews: true
-              require_code_owner_reviews: true
-              required_approving_review_count: 1
-          required_status_checks:
-              strict: true
-          restrictions: null
-          required_linear_history: true
+  - name: master
+    protection:
+      enforce_admins: false
+      required_pull_request_reviews:
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: true
+        required_approving_review_count: 1
+      required_status_checks:
+        strict: true
+      restrictions: null
+      required_linear_history: true
 
 labels:
-    - name: backward breaking change
-      color: ff0000
+  - name: backward breaking change
+    color: ff0000
 
-    - name: bug
-      color: ee0701
+  - name: bug
+    color: ee0701
 
-    - name: dependencies
-      color: 0366d6
+  - name: dependencies
+    color: 0366d6
 
-    - name: enhancement
-      color: 0e8a16
+  - name: enhancement
+    color: 0e8a16
 
-    - name: experimentation
-      color: eeeeee
+  - name: experimentation
+    color: eeeeee
 
-    - name: question
-      color: cc317c
+  - name: question
+    color: cc317c
 
-    - name: new feature
-      color: 0e8a16
+  - name: new feature
+    color: 0e8a16
 
-    - name: security
-      color: ee0701
+  - name: security
+    color: ee0701
 
-    - name: stale
-      color: eeeeee
+  - name: stale
+    color: eeeeee
 
 repository:
-    allow_merge_commit: true
-    allow_rebase_merge: true
-    allow_squash_merge: true
-    default_branch: main
-    description: "You shouldn't ever lose your work if you're using Git"
-    topics: git
-    has_downloads: true
-    has_issues: true
-    has_pages: false
-    has_projects: false
-    has_wiki: false
-    name: dura
-    private: false
+  allow_merge_commit: true
+  allow_rebase_merge: true
+  allow_squash_merge: true
+  default_branch: main
+  description: "You shouldn't ever lose your work if you're using Git"
+  topics: git
+  has_downloads: true
+  has_issues: true
+  has_pages: false
+  has_projects: false
+  has_wiki: false
+  name: dura
+  private: false

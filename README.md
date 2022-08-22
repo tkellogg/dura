@@ -43,7 +43,6 @@ $ git log --all
 `dura` produces a branch for every real commit you make and makes commits to that branch without impacting your working
 copy. You keep using Git exactly as you did before.
 
-
 Let `dura` know that it should stop running in the background with the `kill` command.
 
 ```bash
@@ -116,8 +115,9 @@ nix develop github:tkellogg/dura
 ```
 
 ### Cargo Install
-1. Install Cargo  
-2. If you want run release version, type ```cargo install dura``` else type ```cargo install --git https://github.com/tkellogg/dura```
+
+1. Install Cargo
+2. If you want run release version, type `cargo install dura` else type `cargo install --git https://github.com/tkellogg/dura`
 
 ### By Source
 
@@ -127,6 +127,7 @@ nix develop github:tkellogg/dura
 4. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
 
 ### Windows
+
 1. Download [rustup-init](https://www.rust-lang.org/tools/install)
 2. Clone this repository (e.g., `git clone https://github.com/tkellogg/dura.git`)
 3. Navigate to repository base directory (`cd dura`)
@@ -146,9 +147,9 @@ runs less frequently than every 5 seconds (potentially a lot less frequently, if
 
 ### Does this work on my OS?
 
-- Mac: yes
-- Linux: probably
-- Windows: yes
+-   Mac: yes
+-   Linux: probably
+-   Windows: yes
 
 ### Can I add sub commands and aliases?
 
