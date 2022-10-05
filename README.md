@@ -81,6 +81,31 @@ If you're interested in improving this experience, [collaborate here](https://gi
 
 ## Install
 
+### Cargo Install
+1. Install Cargo  
+2. If you want run release version, type ```cargo install dura``` else type ```cargo install --git https://github.com/tkellogg/dura```
+
+### By Source
+
+1. Install Rust (e.g., `brew install rustup && brew install rust`)
+2. Clone this repository (e.g., `git clone https://github.com/tkellogg/dura.git`)
+3. Navigate to repository base directory (`cd dura`)
+4. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
+
+### Mac OS X
+
+This installs `dura` and sets up a launchctl service to keep it running.
+
+```bash
+$ brew install dura
+```
+
+### Windows
+1. Download [rustup-init](https://www.rust-lang.org/tools/install)
+2. Clone this repository (e.g., `git clone https://github.com/tkellogg/dura.git`)
+3. Navigate to repository base directory (`cd dura`)
+4. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
+
 ### Arch Linux
 
 ```bash
@@ -115,46 +140,17 @@ to develop:
 nix develop github:tkellogg/dura
 ```
 
-### Cargo Install
-1. Install Cargo  
-2. If you want run release version, type ```cargo install dura``` else type ```cargo install --git https://github.com/tkellogg/dura```
-
-### By Source
-
-1. Install Rust (e.g., `brew install rustup && brew install rust`)
-2. Clone this repository (e.g., `git clone https://github.com/tkellogg/dura.git`)
-3. Navigate to repository base directory (`cd dura`)
-4. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
-
-### Windows
-1. Download [rustup-init](https://www.rust-lang.org/tools/install)
-2. Clone this repository (e.g., `git clone https://github.com/tkellogg/dura.git`)
-3. Navigate to repository base directory (`cd dura`)
-4. Run `cargo install --path .` **Note:** If you receive a failure fetching the cargo dependencies try using the local [git client for cargo fetches](https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli). `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path .`
-
 ## FAQ
 
 ### Is this stable?
 
-It's still in the prototype phase. Open issues pertaining to stability are marked with the
-[stability](https://github.com/tkellogg/dura/issues?q=is%3Aopen+is%3Aissue+label%3Astability) tag.
+Yes. Lots of people have been using it since 2022-01-01 without issue. It uses [libgit2](https://libgit2.org/) to make the commits, so it's fairly battle hardened.
 
 ### How often does this check for changes?
 
 Every now and then, like 5 seconds or so. Internally there's a control loop that sleeps 5 seconds between iterations, so it
 runs less frequently than every 5 seconds (potentially a lot less frequently, if there's a lot of work to do).
 
-### Does this work on my OS?
-
-- Mac: yes
-- Linux: probably
-- Windows: yes
-
-### Can I add sub commands and aliases?
-
-Yes, any executable on the path named like `dura-{cmd}` will be executed
-when `dura {cmd}` is called. For example, `dura foo` will try to find an
-executable named `dura-foo` on the `$PATH`.
 
 [build badge]: https://github.com/tkellogg/dura/actions/workflows/build.yaml/badge.svg
 [build action]: https://github.com/tkellogg/dura/actions/workflows/build.yaml
