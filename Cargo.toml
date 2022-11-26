@@ -1,6 +1,6 @@
 [package]
 name = "dura"
-version = "0.2.0"
+version = "0.2.0-dev"
 edition = "2021"
 authors = ["Tim Kellogg and the Internet"]
 description = "Dura backs up your work automatically via Git commits."
