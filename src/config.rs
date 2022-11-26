@@ -11,7 +11,7 @@ use crate::git_repo_iter::GitRepoIter;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct WatchConfig {
     pub include: Vec<String>,
     pub exclude: Vec<String>,
@@ -34,7 +34,7 @@ impl Default for WatchConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Config {
     // When commit_exclude_git_config is true,
     // never use any git configuration to sign dura's commits.

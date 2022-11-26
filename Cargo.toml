@@ -1,6 +1,6 @@
 [package]
 name = "dura"
-version = "0.2.0"
+version = "0.2.0-dev"
 edition = "2021"
 authors = ["Tim Kellogg and the Internet"]
 description = "Dura backs up your work automatically via Git commits."
@@ -20,6 +20,7 @@ chrono = "0.4"
 toml = "0.5.8"
 tracing = { version = "0.1.5"}
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
+hdrhistogram = "7.5.2"
 
 [dev-dependencies]
 tempfile = "3.2.0"
