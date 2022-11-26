@@ -5,7 +5,7 @@ use std::{env, fs, io};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RuntimeLock {
     pub pid: Option<u32>,
 }

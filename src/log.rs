@@ -30,7 +30,7 @@ impl Operation {
                 error,
                 latency: _,
             } => op.is_some() || error.is_some(),
-            Operation::CollectStats { per_dir_stats: _, loop_stats: _ } => {
+            Operation::CollectStats { .. } => {
                 true // logic punted to StatCollector
             },
         }
@@ -38,7 +38,7 @@ impl Operation {
 
     pub fn log_str(&mut self) -> String {
         // This unwrap seems safe, afaict. We're not cramming any user supplied strings in here.
-        serde_json::to_string(self).unwrap()
+        serde_json::to_string(self).expect("Couldn't serialize to JSON")
     }
 }
 
@@ -81,7 +81,7 @@ impl Histo {
             percentiles: hist.iter_quantiles(2).map(|q| Percentile {
                 pct: q.percentile(),
                 val: q.value_iterated_to(),
-            }).collect::<Vec<_>>(),
+            }).collect(),
         }
     }
 }
@@ -93,9 +93,10 @@ pub struct StatCollector {
     loop_stats: Histogram<u64>,
 }
 
-const MAX_LATENCY_IMAGINABLE: u64 = 5*60*1000; // 5 minutes in milliseconds
+/// 5 minutes in milliseconds
+const MAX_LATENCY_IMAGINABLE: u64 = 5*60*1000; 
 
-// How many seconds between logging stats?
+/// How many seconds between logging stats?
 const STAT_LOG_INTERVAL: f32 = 600.0;
 
 impl StatCollector {
