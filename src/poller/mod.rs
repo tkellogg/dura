@@ -10,6 +10,8 @@ use crate::database::RuntimeLock;
 use crate::log::{Operation, StatCollector};
 use crate::snapshots;
 
+mod timestamp_watcher;
+
 /// If the directory is a repo, attempts to create a snapshot.
 /// Otherwise, recurses into each child directory.
 #[tracing::instrument]
