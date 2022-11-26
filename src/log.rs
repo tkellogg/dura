@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 use hdrhistogram::Histogram;
 use serde::{Deserialize, Serialize};
@@ -32,7 +32,7 @@ impl Operation {
             } => op.is_some() || error.is_some(),
             Operation::CollectStats { .. } => {
                 true // logic punted to StatCollector
-            },
+            }
         }
     }
 
@@ -48,7 +48,7 @@ struct Stats {
     loop_stats: Histo,
 }
 
-/// A serializable form of a hdrhistogram, mainly just for logging out 
+/// A serializable form of a hdrhistogram, mainly just for logging out
 /// in a way we want to read it
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Histo {
@@ -78,10 +78,13 @@ impl Histo {
             count: hist.len(),
             min: hist.min(),
             max: hist.max(),
-            percentiles: hist.iter_quantiles(2).map(|q| Percentile {
-                pct: q.percentile(),
-                val: q.value_iterated_to(),
-            }).collect(),
+            percentiles: hist
+                .iter_quantiles(2)
+                .map(|q| Percentile {
+                    pct: q.percentile(),
+                    val: q.value_iterated_to(),
+                })
+                .collect(),
         }
     }
 }
@@ -94,7 +97,7 @@ pub struct StatCollector {
 }
 
 /// 5 minutes in milliseconds
-const MAX_LATENCY_IMAGINABLE: u64 = 5*60*1000; 
+const MAX_LATENCY_IMAGINABLE: u64 = 5 * 60 * 1000;
 
 /// How many seconds between logging stats?
 const STAT_LOG_INTERVAL: f32 = 600.0;
@@ -117,7 +120,11 @@ impl StatCollector {
 
     pub fn should_log(&self) -> bool {
         let elapsed = (Instant::now() - self.start).as_secs_f32();
-        trace!(elapsed = elapsed, target = STAT_LOG_INTERVAL, "Should we log metrics?");
+        trace!(
+            elapsed = elapsed,
+            target = STAT_LOG_INTERVAL,
+            "Should we log metrics?"
+        );
         elapsed > STAT_LOG_INTERVAL
     }
 
@@ -141,7 +148,7 @@ impl StatCollector {
         self.per_dir_stats.saturating_record(value);
     }
 
-    /// Record the time it takes to go through all directories. I expect mean will be the 
+    /// Record the time it takes to go through all directories. I expect mean will be the
     /// most interesting datum. Mainly for projecting CPU usage.
     pub fn record_loop(&mut self, latency: Duration) {
         let value = latency.as_millis().try_into().unwrap();
@@ -154,4 +161,3 @@ impl Default for StatCollector {
         Self::new()
     }
 }
-
