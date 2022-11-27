@@ -3,27 +3,39 @@ use std::process;
 use std::time::Instant;
 
 use tokio::time;
-use tracing::{error, info};
+use tracing::{debug, error, info, trace};
 
 use crate::config::Config;
 use crate::database::RuntimeLock;
 use crate::log::{Operation, StatCollector};
+use crate::poll_guard::PollGuard;
 use crate::snapshots;
 
 /// If the directory is a repo, attempts to create a snapshot.
 /// Otherwise, recurses into each child directory.
 #[tracing::instrument]
-fn process_directory(current_path: &Path) {
+fn process_directory(current_path: &Path, guard: &mut PollGuard) {
     let mut op: Option<snapshots::CaptureStatus> = None;
     let mut error: Option<String> = None;
     let start_time = Instant::now();
 
-    match snapshots::capture(current_path) {
-        Ok(Some(status)) => op = Some(status),
-        Ok(None) => (),
-        Err(err) => {
-            error = Some(format!("{}", err));
+    if guard.dir_changed(current_path) {
+        debug!(
+            "Potential change detected in repo: path = {path}",
+            path = current_path.to_str().unwrap_or("")
+        );
+        match snapshots::capture(current_path) {
+            Ok(Some(status)) => op = Some(status),
+            Ok(None) => (),
+            Err(err) => {
+                error = Some(format!("{}", err));
+            }
         }
+    } else {
+        trace!(
+            "No files in repo have changed: path = {path}",
+            path = current_path.to_str().unwrap_or("")
+        );
     }
 
     let latency = (Instant::now() - start_time).as_secs_f32();
@@ -43,7 +55,7 @@ fn process_directory(current_path: &Path) {
 }
 
 #[tracing::instrument]
-fn do_task(stats: &mut StatCollector) {
+fn do_task(stats: &mut StatCollector, guard: &mut PollGuard) {
     let runtime_lock = RuntimeLock::load();
     if runtime_lock.pid != Some(process::id()) {
         error!(
@@ -58,7 +70,7 @@ fn do_task(stats: &mut StatCollector) {
     let loop_start = Instant::now();
     for repo in config.git_repos() {
         let dir_start = Instant::now();
-        process_directory(repo.as_path());
+        process_directory(repo.as_path(), guard);
         stats.record_dir(Instant::now() - dir_start);
     }
     stats.record_loop(Instant::now() - loop_start);
@@ -75,8 +87,9 @@ pub async fn start() {
     info!(pid = std::process::id());
 
     let mut stats = StatCollector::new();
+    let mut guard = PollGuard::new();
     loop {
         time::sleep(time::Duration::from_secs(5)).await;
-        do_task(&mut stats);
+        do_task(&mut stats, &mut guard);
     }
 }
