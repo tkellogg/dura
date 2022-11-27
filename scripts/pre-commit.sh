@@ -14,7 +14,7 @@ cargo test
 echo "################################"
 echo "### cargo clippy"
 echo "################################"
-cargo clippy -- -D warnings
+cargo clippy --all-targets --all-features -- -D warnings
 
 echo "################################"
 echo "### cargo fmt"

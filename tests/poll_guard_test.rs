@@ -14,11 +14,11 @@ fn changed_file() {
     repo.commit_all();
 
     let mut pg = PollGuard::new();
-    assert_eq!(pg.dir_changed(repo.dir.as_path()), false);
+    assert!(!pg.dir_changed(repo.dir.as_path()));
 
     sleep(Duration::from_secs_f64(1.5));
     repo.change_file("foo.txt");
-    assert_eq!(pg.dir_changed(repo.dir.as_path()), true);
+    assert!(pg.dir_changed(repo.dir.as_path()));
 }
 
 /// Changing a branch shouldn't trigger the slow process
@@ -31,12 +31,12 @@ fn branch_changed() {
     repo.commit_all();
 
     let mut pg = PollGuard::new();
-    assert_eq!(pg.dir_changed(repo.dir.as_path()), false);
+    assert!(!pg.dir_changed(repo.dir.as_path()));
 
     sleep(Duration::from_secs_f64(1.5));
     repo.git(&["checkout", "-b", "new-branch"])
         .expect("checkout failed");
-    assert_eq!(pg.dir_changed(repo.dir.as_path()), false);
+    assert!(!pg.dir_changed(repo.dir.as_path()));
 }
 
 #[test]
@@ -48,17 +48,17 @@ fn file_changed_after_snapshot() {
     repo.commit_all();
 
     let mut pg = PollGuard::new();
-    assert_eq!(pg.dir_changed(repo.dir.as_path()), false);
+    assert!(!pg.dir_changed(repo.dir.as_path()));
 
     sleep(Duration::from_secs_f64(1.5));
     repo.change_file("foo.txt");
-    assert_eq!(pg.dir_changed(repo.dir.as_path()), true);
+    assert!(pg.dir_changed(repo.dir.as_path()));
 
     sleep(Duration::from_secs_f64(1.5));
     snapshots::capture(repo.dir.as_path()).expect("snapshot failed");
-    assert_eq!(pg.dir_changed(repo.dir.as_path()), false);
+    assert!(!pg.dir_changed(repo.dir.as_path()));
 
     sleep(Duration::from_secs_f64(1.5));
     repo.change_file("foo.txt");
-    assert_eq!(pg.dir_changed(repo.dir.as_path()), true);
+    assert!(pg.dir_changed(repo.dir.as_path()));
 }
