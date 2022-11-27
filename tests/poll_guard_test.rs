@@ -8,11 +8,7 @@ mod util;
 #[test]
 fn changed_file() {
     let tmp = tempfile::tempdir().unwrap();
-    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
-    repo.init();
-    repo.write_file("foo.txt");
-    repo.commit_all();
-
+    let mut repo = repo_and_file!(tmp, "foo.txt");
     let mut pg = PollGuard::new();
     assert!(!pg.dir_changed(repo.dir.as_path()));
 
@@ -25,11 +21,7 @@ fn changed_file() {
 #[test]
 fn branch_changed() {
     let tmp = tempfile::tempdir().unwrap();
-    let repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
-    repo.init();
-    repo.write_file("foo.txt");
-    repo.commit_all();
-
+    let repo = repo_and_file!(tmp, "foo.txt");
     let mut pg = PollGuard::new();
     assert!(!pg.dir_changed(repo.dir.as_path()));
 
@@ -42,11 +34,7 @@ fn branch_changed() {
 #[test]
 fn file_changed_after_snapshot() {
     let tmp = tempfile::tempdir().unwrap();
-    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
-    repo.init();
-    repo.write_file("foo.txt");
-    repo.commit_all();
-
+    let mut repo = repo_and_file!(tmp, "foo.txt");
     let mut pg = PollGuard::new();
     assert!(!pg.dir_changed(repo.dir.as_path()));
 

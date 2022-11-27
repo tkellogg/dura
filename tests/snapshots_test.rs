@@ -10,11 +10,7 @@ extern crate serial_test;
 #[test]
 fn change_single_file() {
     let tmp = tempfile::tempdir().unwrap();
-    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
-    repo.init();
-    repo.write_file("foo.txt");
-    repo.commit_all();
-
+    let mut repo = repo_and_file!(tmp, "foo.txt");
     repo.change_file("foo.txt");
     let status = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
 
@@ -26,11 +22,7 @@ fn change_single_file() {
 #[test]
 fn no_changes() {
     let tmp = tempfile::tempdir().unwrap();
-    let repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
-    repo.init();
-    repo.write_file("foo.txt");
-    repo.commit_all();
-
+    let repo = repo_and_file!(tmp, "foo.txt");
     let status = snapshots::capture(repo.dir.as_path()).unwrap();
 
     assert_eq!(status, None);
@@ -40,12 +32,7 @@ fn no_changes() {
 #[test]
 fn during_merge_conflicts() {
     let tmp = tempfile::tempdir().unwrap();
-    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
-    repo.init();
-
-    // parent commit
-    repo.write_file("foo.txt");
-    repo.commit_all();
+    let mut repo = repo_and_file!(tmp, "foo.txt");
 
     // branch1
     repo.change_file("foo.txt");

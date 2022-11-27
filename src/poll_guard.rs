@@ -1,4 +1,5 @@
 use git2::{BranchType, Commit, Repository};
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
@@ -42,8 +43,7 @@ impl PollGuard {
         }
 
         for entry in WalkDir::new(dir) {
-            let repo = self.git_cache.get(dir).unwrap();
-            if let Ok(ref repo_path) = entry {
+            if let (Ok(ref repo_path), Some(repo)) = (&entry, self.git_cache.get(dir)) {
                 if repo.is_path_ignored(repo_path.path()).unwrap_or(false) {
                     continue;
                 }
@@ -61,12 +61,12 @@ impl PollGuard {
 
     /// Find the last known commit timestamp
     fn get_watermark(&mut self, path: &Path) -> Result<SystemTime> {
-        let repo: &Repository = match self.git_cache.get(path) {
-            Some(found) => found,
-            None => {
+        // Get git repo, create if necessary
+        let repo: &Repository = match self.git_cache.entry(path.into()) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => {
                 let new = Repository::open(path)?;
-                self.git_cache.insert(path.to_path_buf(), new);
-                self.git_cache.get(path).unwrap()
+                entry.insert(new)
             }
         };
 
