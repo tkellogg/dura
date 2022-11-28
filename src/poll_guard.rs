@@ -85,7 +85,7 @@ impl PollGuard {
 
         // get commit time and fallback to time of HEAD
         let head = repo.head()?.peel_to_commit()?;
-        get_dura_time(&head, repo).or_else(|_| Ok(get_time(&head)))
+        Ok(get_dura_time(&head, repo).unwrap_or_else(|_| get_time(&head)))
     }
 }
 
