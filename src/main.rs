@@ -3,7 +3,10 @@ use std::io::{stdin, stdout, BufReader, BufWriter, Read, Write};
 use std::path::Path;
 use std::process;
 
-use clap::{arg, crate_authors, crate_description, crate_name, crate_version, Arg, Command};
+use clap::builder::IntoResettable;
+use clap::{
+    arg, crate_authors, crate_description, crate_name, crate_version, value_parser, Arg, Command,
+};
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
@@ -25,12 +28,12 @@ async fn main() {
     let version = format!("{}{}", crate_version!(), suffix);
 
     let arg_directory = Arg::new("directory")
-        .default_value_os(cwd.as_os_str())
+        .default_value(cwd.into_os_string().into_resettable())
         .help("The directory to watch. Defaults to current directory");
 
     let matches = Command::new(crate_name!())
         .about(crate_description!())
-        .version(version.as_str())
+        .version(version.into_resettable())
         .subcommand_required(true)
         .arg_required_else_help(true)
         .author(crate_authors!())
@@ -47,7 +50,7 @@ async fn main() {
                 .long_flag("serve")
                 .about("Starts the worker that listens for file changes. If another process is already running, this will do it's best to terminate the other process.")
                 .arg(
-                    arg!(--logfile)
+                    arg!(--logfile <FILE>)
                     .required(false)
                     .help("Sets custom logfile. Default is logging to stdout")
         ))
@@ -59,21 +62,26 @@ async fn main() {
                 .arg(arg_directory.clone())
                 .arg(arg!(-i --include)
                     .required(false)
-                    .takes_value(true)
-                    .use_value_delimiter(true)
-                    .require_value_delimiter(true)
+                    .action(clap::builder::ArgAction::Set)
+                    .num_args(0..)
+                    .value_parser(value_parser!(String))
+                    .value_delimiter(',')
                     .help("Overrides excludes by re-including specific directories relative to the watch directory.")
                 )
                 .arg(arg!(-e --exclude)
                     .required(false)
-                    .takes_value(true)
-                    .use_value_delimiter(true)
-                    .require_value_delimiter(true)
+                    .action(clap::builder::ArgAction::Set)
+                    .num_args(0..)
+                    .value_parser(value_parser!(String))
+                    .value_delimiter(',')
                     .help("Excludes specific directories relative to the watch directory")
                 )
                 .arg(arg!(-d --maxdepth)
                     .required(false)
-                    .default_value("255")
+                    .action(clap::builder::ArgAction::Set)
+                    .value_parser(value_parser!(String))
+                    .default_value(&"255".to_string())
+                    .num_args(0..=1)
                     .help("Determines the depth to recurse into when scanning directories")
                 )
         )
@@ -97,12 +105,12 @@ async fn main() {
                 .about("Convert logs into richer metrics about snapshots.")
                 .arg(arg!(-i --input)
                      .required(false)
-                     .takes_value(true)
+                     .num_args(1)
                      .help("The log file to read. Defaults to stdin.")
                  )
                 .arg(arg!(-o --output)
                      .required(false)
-                     .takes_value(true)
+                     .num_args(1)
                      .help("The json file to write. Defaults to stdout.")
                  )
         )
@@ -110,7 +118,7 @@ async fn main() {
 
     match matches.subcommand() {
         Some(("capture", arg_matches)) => {
-            let dir = Path::new(arg_matches.value_of("directory").unwrap());
+            let dir = Path::new(arg_matches.get_one::<String>("directory").unwrap());
             match snapshots::capture(dir) {
                 Ok(oid_opt) => {
                     if let Some(oid) = oid_opt {
@@ -127,7 +135,7 @@ async fn main() {
             let env_filter =
                 EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-            match arg_matches.value_of("logfile") {
+            match arg_matches.get_one::<String>("logfile") {
                 Some(logfile) => {
                     let file = logfile.to_string();
                     Registry::default()
@@ -159,21 +167,21 @@ async fn main() {
             poller::start().await;
         }
         Some(("watch", arg_matches)) => {
-            let dir = Path::new(arg_matches.value_of("directory").unwrap());
+            let dir = Path::new(arg_matches.get_one::<String>("directory").unwrap());
 
             let include = arg_matches
-                .values_of("include")
+                .get_many::<String>("include")
                 .unwrap_or_default()
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
             let exclude = arg_matches
-                .values_of("exclude")
+                .get_many::<String>("exclude")
                 .unwrap_or_default()
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
             let max_depth = arg_matches
-                .value_of("maxdepth")
-                .unwrap_or("255")
+                .get_one::<String>("maxdepth")
+                .unwrap_or(&"255".to_string())
                 .parse::<u8>()
                 .expect("Max depth must be between 0-255");
 
@@ -186,20 +194,20 @@ async fn main() {
             watch_dir(dir, watch_config);
         }
         Some(("unwatch", arg_matches)) => {
-            let dir = Path::new(arg_matches.value_of("directory").unwrap());
+            let dir = Path::new(arg_matches.get_one::<String>("directory").unwrap());
             unwatch_dir(dir)
         }
         Some(("kill", _)) => {
             kill();
         }
         Some(("metrics", arg_matches)) => {
-            let mut input: Box<dyn Read> = match arg_matches.value_of("input") {
+            let mut input: Box<dyn Read> = match arg_matches.get_one::<String>("input") {
                 Some(input) => Box::new(
                     File::open(input).unwrap_or_else(|_| panic!("Couldn't open '{}'", input)),
                 ),
                 None => Box::new(BufReader::new(stdin())),
             };
-            let mut output: Box<dyn Write> = match arg_matches.value_of("output") {
+            let mut output: Box<dyn Write> = match arg_matches.get_one::<String>("output") {
                 Some(output) => Box::new(
                     File::open(output).unwrap_or_else(|_| panic!("Couldn't open '{}'", output)),
                 ),
