@@ -43,12 +43,6 @@ impl PollGuard {
         }
 
         for entry in WalkDir::new(dir) {
-            if let (Ok(ref repo_path), Some(repo)) = (&entry, self.git_cache.get(dir)) {
-                if repo.is_path_ignored(repo_path.path()).unwrap_or(false) {
-                    continue;
-                }
-            }
-
             if let Ok(modified) = get_file_time(entry) {
                 if compare_times(modified, watermark).unwrap_or(false) {
                     dbg!(modified, watermark);

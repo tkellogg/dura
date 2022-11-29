@@ -7,6 +7,7 @@ use clap::builder::IntoResettable;
 use clap::{
     arg, crate_authors, crate_description, crate_name, crate_version, value_parser, Arg, Command,
 };
+use tracing::info;
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
@@ -164,6 +165,7 @@ async fn main() {
                 }
             }
 
+            info!("Started serving with dura v{}", crate_version!());
             poller::start().await;
         }
         Some(("watch", arg_matches)) => {
