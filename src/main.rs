@@ -7,13 +7,13 @@ use clap::builder::IntoResettable;
 use clap::{
     arg, crate_authors, crate_description, crate_name, crate_version, value_parser, Arg, Command,
 };
-use tracing::info;
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
 use dura::metrics;
 use dura::poller;
 use dura::snapshots;
+use tracing::info;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
