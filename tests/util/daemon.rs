@@ -36,11 +36,7 @@ impl Daemon {
     /// over the channel. It sends a None right before it quits, either due to an error or EOF.
     fn attach(stdout: ChildStdout, kill_sign: Arc<Mutex<i32>>) -> Receiver<Option<String>> {
         fn is_ignored(msg: &str) -> bool {
-            if msg.contains("Started serving with dura") {
-                true
-            } else {
-                false
-            }
+            msg.contains("Started serving with dura")
         }
         let (sender, receiver) = channel();
         thread::spawn(move || {
