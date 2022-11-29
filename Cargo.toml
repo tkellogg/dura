@@ -10,7 +10,7 @@ repository = "https://github.com/tkellogg/dura/"
 documentation = "https://github.com/tkellogg/dura/blob/master/README.md"
 
 [dependencies]
-clap = { version = "3.1.6", features = ["cargo"] }
+clap = { version = "4.0", features = ["cargo", "string"] }
 git2 = "0.13"
 dirs = "4.0.0"
 tokio = { version = "1", features = ["full"] }
