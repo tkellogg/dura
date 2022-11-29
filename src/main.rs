@@ -3,8 +3,10 @@ use std::io::{stdin, stdout, BufReader, BufWriter, Read, Write};
 use std::path::Path;
 use std::process;
 
-use clap::{arg, crate_authors, crate_description, crate_name, crate_version, Arg, Command};
-use clap::builder::{IntoResettable};
+use clap::builder::IntoResettable;
+use clap::{
+    arg, crate_authors, crate_description, crate_name, crate_version, value_parser, Arg, Command,
+};
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
 use dura::logger::NestedJsonLayer;
@@ -48,7 +50,7 @@ async fn main() {
                 .long_flag("serve")
                 .about("Starts the worker that listens for file changes. If another process is already running, this will do it's best to terminate the other process.")
                 .arg(
-                    arg!(--logfile)
+                    arg!(--logfile <FILE>)
                     .required(false)
                     .help("Sets custom logfile. Default is logging to stdout")
         ))
@@ -60,19 +62,26 @@ async fn main() {
                 .arg(arg_directory.clone())
                 .arg(arg!(-i --include)
                     .required(false)
-                    .num_args(1)
+                    .action(clap::builder::ArgAction::Set)
+                    .num_args(0..)
+                    .value_parser(value_parser!(String))
                     .value_delimiter(',')
                     .help("Overrides excludes by re-including specific directories relative to the watch directory.")
                 )
                 .arg(arg!(-e --exclude)
                     .required(false)
-                    .num_args(1)
+                    .action(clap::builder::ArgAction::Set)
+                    .num_args(0..)
+                    .value_parser(value_parser!(String))
                     .value_delimiter(',')
                     .help("Excludes specific directories relative to the watch directory")
                 )
                 .arg(arg!(-d --maxdepth)
                     .required(false)
-                    .default_value("255")
+                    .action(clap::builder::ArgAction::Set)
+                    .value_parser(value_parser!(String))
+                    .default_value(&"255".to_string())
+                    .num_args(0..=1)
                     .help("Determines the depth to recurse into when scanning directories")
                 )
         )
