@@ -20,6 +20,11 @@ use tracing_subscriber::{EnvFilter, Registry};
 
 #[tokio::main]
 async fn main() {
+    if !check_if_user() {
+        eprintln!("Dura cannot be run as root, to avoid data corruption");
+        process::exit(1);
+    }
+
     let cwd = std::env::current_dir().expect("Failed to get current directory");
 
     let suffix = option_env!("DURA_VERSION_SUFFIX")
@@ -244,6 +249,16 @@ fn unwatch_dir(path: &std::path::Path) {
 
     config.set_unwatch(path);
     config.save();
+}
+
+#[cfg(all(unix))]
+fn check_if_user() -> bool {
+    sudo::check() != sudo::RunningAs::Root
+}
+
+#[cfg(target_os = "windows")]
+fn check_if_user() -> bool {
+    true
 }
 
 /// kills running dura poller

@@ -23,6 +23,7 @@ toml = "0.5.8"
 tracing = { version = "0.1.5"}
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
 walkdir = "2.3.2"
+sudo = "0.6.0"
 
 [dev-dependencies]
 tempfile = "3.2.0"
