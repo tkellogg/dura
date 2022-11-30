@@ -4,3 +4,4 @@
 pub mod daemon;
 pub mod dura;
 pub mod git_repo;
+pub mod macros;

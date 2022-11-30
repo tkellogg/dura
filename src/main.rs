@@ -13,6 +13,7 @@ use dura::logger::NestedJsonLayer;
 use dura::metrics;
 use dura::poller;
 use dura::snapshots;
+use tracing::info;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
@@ -164,6 +165,7 @@ async fn main() {
                 }
             }
 
+            info!("Started serving with dura v{}", crate_version!());
             poller::start().await;
         }
         Some(("watch", arg_matches)) => {

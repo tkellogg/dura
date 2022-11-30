@@ -35,6 +35,9 @@ impl Daemon {
     /// Spawn another thread to watch the child process. It attaches to stdout and sends each line
     /// over the channel. It sends a None right before it quits, either due to an error or EOF.
     fn attach(stdout: ChildStdout, kill_sign: Arc<Mutex<i32>>) -> Receiver<Option<String>> {
+        fn is_ignored(msg: &str) -> bool {
+            msg.contains("Started serving with dura")
+        }
         let (sender, receiver) = channel();
         thread::spawn(move || {
             let mut reader = BufReader::new(stdout);
@@ -52,7 +55,9 @@ impl Daemon {
                         break;
                     }
                     Ok(_) => {
-                        sender.send(Some(line)).unwrap();
+                        if !is_ignored(line.as_str()) {
+                            sender.send(Some(line)).unwrap();
+                        }
                     }
                     Err(e) => {
                         eprintln!("Error in daemon: {:?}", e);
