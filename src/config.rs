@@ -4,10 +4,11 @@ use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::{env, fs};
+use std::cell::RefCell;
 
 use serde::{Deserialize, Serialize};
 
-use crate::git_repo_iter::GitRepoIter;
+use crate::git_repo_iter::{CachedFs, GitRepoIter};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -34,7 +35,7 @@ impl Default for WatchConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     // When commit_exclude_git_config is true,
     // never use any git configuration to sign dura's commits.
@@ -44,6 +45,9 @@ pub struct Config {
     pub commit_author: Option<String>,
     pub commit_email: Option<String>,
     pub repos: BTreeMap<String, Rc<WatchConfig>>,
+
+    #[serde(skip_serializing, skip_deserializing)]
+    cache: Rc<RefCell<CachedFs>>,
 }
 
 impl Config {
@@ -53,6 +57,7 @@ impl Config {
             commit_author: None,
             commit_email: None,
             repos: BTreeMap::new(),
+            cache: Rc::new(RefCell::new(CachedFs::default())),
         }
     }
 
@@ -159,7 +164,7 @@ impl Config {
         }
     }
 
-    pub fn git_repos(&self) -> GitRepoIter {
-        GitRepoIter::new(self)
+    pub fn git_repos(&mut self) -> GitRepoIter {
+        GitRepoIter::new(self, Rc::clone(&self.cache))
     }
 }

@@ -137,7 +137,7 @@ impl Dura {
 
     pub fn git_repos(&self) -> HashSet<path::PathBuf> {
         match self.get_config() {
-            Some(cfg) => cfg.git_repos().collect(),
+            Some(mut cfg) => cfg.git_repos().collect(),
             None => HashSet::new(),
         }
     }
