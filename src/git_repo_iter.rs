@@ -11,7 +11,7 @@ use qp_trie::Trie;
 use num_traits::cast::ToPrimitive;
 use rand::prelude::ThreadRng;
 use rand::{Rng, thread_rng};
-use tracing::{debug, warn};
+use tracing::{debug, info, trace, warn};
 
 use crate::config::{Config, WatchConfig};
 use crate::snapshots;
@@ -155,13 +155,13 @@ impl<'a> Iterator for GitRepoIter<'a> {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CacheItem {
     /// Random number used for occasionally invalidating the cache
     sig_invalidate: u8,
     /// Force invalidate at this point
     ttl: Instant,
-    initialized: bool,
+    children: Rc<RefCell<Vec<String>>>,
 }
 
 /// A repository of directory iterators that caches to avoid hitting the disk. Cache
@@ -186,7 +186,16 @@ pub struct CachedFs {
 }
 
 impl CachedFs {
+    /// # Arguments
+    ///
+    /// * `max_lifetime` — The maximum time a cache entry should live. In other words, "how long
+    ///   are you willing to go without a new Git repo being discovered?"
+    /// * `expected_interval` — The average duration between calls to `list_dir`. i.e. average
+    ///   loop time, from the statistics.
     pub fn new(max_lifetime: Duration, expected_interval: Duration) -> Self {
+        assert!(max_lifetime > expected_interval,
+                "max_lifetime should be larger than expected_interval, otherwise
+strange behavior may occur");
         let max_sig_ticks = (max_lifetime.as_secs_f32() / expected_interval.as_secs_f32()).to_u8();
         let mut rng = thread_rng();
         let max_ticks = max_sig_ticks.unwrap_or(255);
@@ -199,66 +208,125 @@ impl CachedFs {
         }
     }
 
+    /// Used in testing to reset TTL of all the nodes in the trie to the current instant.
+    /// Within tests, this makes it so we can keep the time horizons very low. I don't think
+    /// it's much use outside tests.
+    pub fn reset_ttl(&self) {
+        let now = Instant::now().add(self.max_lifetime);
+        let mut cache = (*self.cache).borrow_mut();
+        for (_, cache_item) in cache.iter_mut() {
+            cache_item.ttl = now;
+        }
+        info!("Reset all TTL items");
+    }
+
+    /// This should be called every now and then. If it's not called periodically, our cache
+    /// items won't expire. Originally I intended this to be called at the start of processing
+    /// all Git repos once. I think it could be called more often than that, certainly not less.
     pub fn cycle(&mut self) {
         self.current_sig_tick = self.gen_rand();
     }
 
     fn gen_rand(&mut self) -> u8 {
-        self.rng.borrow_mut().gen_range(0u8 .. self.max_sig_ticks)
+        (*self.rng).borrow_mut().gen_range(0u8 .. self.max_sig_ticks)
     }
 
+    /// List the directory. This should be have the same as fs::ReadDir except that
+    /// it may return a cached version instead, to avoid disk access.
     pub fn list_dir<'a>(&self, path: PathBuf) -> CachedDirIter {
         let ppath = PPath::new(&path);
-        let cache = (*self.cache).borrow();
-        match cache.get::<PPath>(&ppath) {
+        let cache_item = {
+            let cache = (*self.cache).borrow();
+            let opt = cache.get::<PPath>(&ppath);
+            opt.map(|i| i.clone())
+        };
+
+        fn get_remember_path(item: &CacheItem) -> RememberPath {
+            // copy what can live longer
+            let children = Rc::clone(&item.children);
+            Rc::new(move |segment| {
+                // borrow or a very short period
+                (*children).borrow_mut().push(segment);
+            })
+        }
+
+        match cache_item {
             Some(found) if found.sig_invalidate == self.current_sig_tick => {
-                self.send_miss(&ppath)
+                debug!("Cache miss, random bucket; sig_invalidate={}, path={}",
+                    found.sig_invalidate, ppath.to_string());
+                self.send_miss(&ppath, get_remember_path(&found))
             }
-            Some(found) if !found.initialized => {
-                self.send_miss(&ppath)
+            // Some(found) if found.children == None => {
+            //     debug!("Cache miss, uninitialized; path={}", ppath.to_string());
+            //     self.send_miss(&ppath, get_remember_path(&found))
+            // }
+            Some(found) if found.ttl < Instant::now() => {
+                debug!("Cache miss, timeout; ttl_delta={}, secs, path={}",
+                    (Instant::now() - found.ttl).as_secs_f32(), ppath.to_string());
+                self.send_miss(&ppath, get_remember_path(&found))
             }
             Some(_) => {
+                trace!("Cache hit; path={}", ppath.to_string());
                 self.send_hit(&ppath)
             }
             None => {
-                self.send_miss(&ppath)
+                debug!("Cache miss, not present; path={}", ppath.to_string());
+                let created = self.get_new_cache_item()();
+                self.send_miss(&ppath, get_remember_path(&created))
             }
         }
     }
 
     fn send_hit(&self, ppath: &PPath) -> CachedDirIter {
-        let copy: Vec<_> = (*self.cache).borrow().iter_prefix::<PPath>(&ppath)
-            // TODO: do we have to remove non-direct children? Write tests and find out...
-            .map(|pair| {
-                let (ppath, _) = pair;
-                Rc::new(ppath.path())
-            })
-            .collect();
+        let empty = Rc::new(RefCell::new(vec![]));
+        let cache = (*self.cache).borrow();
+        let complex = cache.get::<PPath>(ppath)
+            .map(|item| item.children.as_ref())
+            .unwrap_or(&empty);
+        let children = (*complex).borrow()
+            .iter()
+            .map(|str| Rc::new(ppath.path().join(str)))
+            .collect::<Vec<_>>();
 
         CachedDirIter::Hit {
             index: 0,
-            listing: copy,
+            listing: children,
         }
     }
 
-    fn send_miss(&self, ppath: &PPath) -> CachedDirIter {
-        // create a NewCacheItem function
+    /// Create a NewCacheItem function
+    ///
+    /// TODO: I've rationalized to myself that NewCacheItem needs to be a function, but maybe it
+    /// can be simplified?
+    fn get_new_cache_item(&self) -> NewCacheItem {
         let copied_rng = Rc::clone(&self.rng);
         let ttl = Instant::now().add(self.max_lifetime);
         let max_sig_ticks = self.max_sig_ticks;
         let new_cache_item: NewCacheItem = Rc::new(move || CacheItem {
-            sig_invalidate: copied_rng.borrow_mut().gen_range(0u8 .. max_sig_ticks),
+            sig_invalidate: (*copied_rng).borrow_mut().gen_range(0u8 .. max_sig_ticks),
             ttl,
-            initialized: false,
+            children: Rc::new(RefCell::new(vec![])),
         });
+        new_cache_item
+    }
+
+    fn send_miss(&self, ppath: &PPath, remember_path: RememberPath) -> CachedDirIter {
+        let new_cache_item = self.get_new_cache_item();
 
         // read dir
         match fs::read_dir((&ppath.path()).as_path()) {
-            Ok(iter) => CachedDirIter::Miss(
-                iter,
-                Rc::clone(&self.cache),
-                Rc::clone(&new_cache_item),
-            ),
+            Ok(iter) => {
+                let item = new_cache_item();
+                (*self.cache).borrow_mut().insert(ppath.clone(), item);
+                debug!("Initialized cache for directory; path={path}", path=ppath.to_string());
+
+                CachedDirIter::Miss(
+                    iter,
+                    Rc::clone(&self.cache),
+                    Rc::clone(&new_cache_item),
+                    remember_path,
+                )
+            },
             Err(err) => {
                 warn!("Failed to read dir: {} due to error: {}", &ppath.path().display(), err);
                 // an empty hit
@@ -299,6 +367,16 @@ impl PPath {
     }
 }
 
+// for debugging purposes
+impl ToString for PPath {
+    fn to_string(&self) -> String {
+        match self.path().into_os_string().into_string() {
+            Ok(str) => str,
+            Err(_) => "n/a".to_string(),
+        }
+    }
+}
+
 impl Borrow<[u8]> for PPath {
     fn borrow(&self) -> &[u8] {
         &*self.bytes
@@ -307,10 +385,12 @@ impl Borrow<[u8]> for PPath {
 
 type NewCacheItem = Rc<dyn Fn() -> CacheItem>;
 
+type RememberPath = Rc<dyn Fn(String) -> ()>;
+
 /// Union over 2 types of iterators over directories. Either the
 /// cache hit or cache miss mode.
 pub enum CachedDirIter {
-    Miss(fs::ReadDir, Rc<RefCell<Trie<PPath, CacheItem>>>, NewCacheItem),
+    Miss(fs::ReadDir, Rc<RefCell<Trie<PPath, CacheItem>>>, NewCacheItem, RememberPath),
     Hit { index: usize, listing: Vec<Rc<PathBuf>>}
 }
 
@@ -319,7 +399,7 @@ impl Iterator for CachedDirIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            CachedDirIter::Miss(iter, cache_cell, new_cache_item) => {
+            CachedDirIter::Miss(iter, cache_cell, new_cache_item, remember_path) => {
                 iter.next().and_then(|e|
                     e.ok().map(|d| {
                         let path = Rc::new(d.path());
@@ -338,6 +418,15 @@ impl Iterator for CachedDirIter {
                                     path=(*path).display());
                             }
                         }
+
+                        // maintain a vec of dir names in self
+                        let comp = (*path).components().last().and_then(|last| {
+                            last.as_os_str().to_os_string().into_string().ok()
+                        });
+                        if let Some(segment) = comp {
+                            remember_path(segment);
+                        }
+
                         path
                     })
                 )
@@ -352,5 +441,24 @@ impl Iterator for CachedDirIter {
                 result
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+    use crate::git_repo_iter::CachedFs;
+
+    #[test]
+    fn new_cachedfs() {
+        let cf = CachedFs::new(Duration::from_secs(120), Duration::from_secs(5));
+        assert_eq!(cf.max_sig_ticks, 24u8);
+        assert!(cf.current_sig_tick < cf.max_sig_ticks);
+    }
+
+    #[test]
+    #[should_panic]
+    fn new_cachedfs_panic_when_parameters_reversed() {
+        CachedFs::new(Duration::from_secs(5), Duration::from_secs(120));
     }
 }
