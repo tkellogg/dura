@@ -32,7 +32,7 @@ mod cached_fs_test {
         let tmp = tempfile::tempdir().unwrap();
         repo_and_file!(tmp, &["repo1"], "foo.txt");
         repo_and_file!(tmp, &["repo2"], "foo.txt");
-        let fs = CachedFs::new(Duration::from_millis(50),
+        let mut fs = CachedFs::new(Duration::from_millis(50),
                                Duration::from_millis(5));
         let mut found = iter_to_set(fs.list_dir(tmp.path().to_path_buf()));
         assert_eq!(found.len(), 2);
@@ -59,6 +59,7 @@ mod cached_fs_test {
                 thread::sleep(Duration::from_millis(5));
             }
 
+            fs.cycle();
             ret += 1;
         }
 
@@ -83,6 +84,7 @@ mod cached_fs_test {
     /// the cache gets invalidated early
     #[test]
     fn invalidates_cache_roughly_along_normal_distribution() {
+        // set_log_lvl!(filter::LevelFilter::TRACE);
 
         let result = (0..100).map(|_| do_test()).collect::<Vec<_>>();
         let exit_loop = result.iter().map(|x| x.0).collect::<Vec<_>>();

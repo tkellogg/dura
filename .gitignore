@@ -8,3 +8,6 @@ debug/
 # debugging information from rustc on MSVC Windows
 *.pdb
 /.idea/
+
+# python
+.ipynb_checkpoints/

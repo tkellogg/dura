@@ -6,6 +6,7 @@ use std::ops::Add;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
+use num_traits::abs;
 use os_str_bytes::OsStringBytes;
 use qp_trie::Trie;
 use num_traits::cast::ToPrimitive;
@@ -158,7 +159,7 @@ impl<'a> Iterator for GitRepoIter<'a> {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CacheItem {
     /// Random number used for occasionally invalidating the cache
-    sig_invalidate: u8,
+    sig_invalidate: u16,
     /// Force invalidate at this point
     ttl: Instant,
     children: Rc<RefCell<Vec<String>>>,
@@ -180,8 +181,9 @@ pub struct CacheItem {
 pub struct CachedFs {
     cache: Rc<RefCell<Trie<PPath, CacheItem>>>,
     max_lifetime: Duration,
-    max_sig_ticks: u8,
-    current_sig_tick: u8,
+    max_sig_ticks: u16,
+    current_sig_tick: u16,
+    cycle_count: u16,
     rng: Rc<RefCell<ThreadRng>>,
 }
 
@@ -196,15 +198,20 @@ impl CachedFs {
         assert!(max_lifetime > expected_interval,
                 "max_lifetime should be larger than expected_interval, otherwise
 strange behavior may occur");
-        let max_sig_ticks = (max_lifetime.as_secs_f32() / expected_interval.as_secs_f32()).to_u8();
+        let max_sig_ticks =
+            // Decided on this after modeling it in ./scripts/CachedFs.ipynb
+            // Having a ratio of 1/4 gives it decent behavior
+            (((max_lifetime.as_secs_f32() / 4.0) / expected_interval.as_secs_f32()) + 1.0)
+            .to_u16();
         let mut rng = thread_rng();
         let max_ticks = max_sig_ticks.unwrap_or(255);
         Self {
             cache: Rc::new(RefCell::new(Trie::new())),
             max_lifetime,
             max_sig_ticks: max_ticks,
-            current_sig_tick: rng.gen_range(0u8 .. max_ticks),
+            current_sig_tick: rng.gen_range(0 .. max_ticks),
             rng: Rc::new(RefCell::new(rng)),
+            cycle_count: 0,
         }
     }
 
@@ -224,11 +231,20 @@ strange behavior may occur");
     /// items won't expire. Originally I intended this to be called at the start of processing
     /// all Git repos once. I think it could be called more often than that, certainly not less.
     pub fn cycle(&mut self) {
+        self.cycle_count = (self.cycle_count + 1) % (self.max_sig_ticks * 4);
         self.current_sig_tick = self.gen_rand();
     }
 
-    fn gen_rand(&mut self) -> u8 {
-        (*self.rng).borrow_mut().gen_range(0u8 .. self.max_sig_ticks)
+    /// Generate a random number.
+    /// The notebook in `./scripts/CachedFs.ipynb` explores the functions and coefficients.
+    /// I arrived at these magic numbers after a lot of experimentation. It seems that these
+    /// tend to generate a distribution that's a little biased toward left.
+    fn gen_rand(&mut self) -> u16 {
+        let n = self.max_sig_ticks as f32;
+        let i = self.cycle_count as f32;
+        let max = (n + abs((2.0 * n) - i.powf(0.9)))
+            .to_u16().unwrap_or(u16::MAX);
+        (*self.rng).borrow_mut().gen_range(0..max)
     }
 
     /// List the directory. This should be have the same as fs::ReadDir except that
@@ -265,8 +281,9 @@ strange behavior may occur");
                     (Instant::now() - found.ttl).as_secs_f32(), ppath.to_string());
                 self.send_miss(&ppath, get_remember_path(&found))
             }
-            Some(_) => {
-                trace!("Cache hit; path={}", ppath.to_string());
+            Some(found) => {
+                trace!("Cache hit; path={}, local={}, global={}, num_buckets={}", ppath.to_string(),
+                    found.sig_invalidate, self.current_sig_tick, self.max_sig_ticks);
                 self.send_hit(&ppath)
             }
             None => {
@@ -303,7 +320,7 @@ strange behavior may occur");
         let ttl = Instant::now().add(self.max_lifetime);
         let max_sig_ticks = self.max_sig_ticks;
         let new_cache_item: NewCacheItem = Rc::new(move || CacheItem {
-            sig_invalidate: (*copied_rng).borrow_mut().gen_range(0u8 .. max_sig_ticks),
+            sig_invalidate: (*copied_rng).borrow_mut().gen_range(0u16 .. max_sig_ticks),
             ttl,
             children: Rc::new(RefCell::new(vec![])),
         });
@@ -338,14 +355,7 @@ strange behavior may occur");
 
 impl Default for CachedFs {
     fn default() -> Self {
-        Self {
-            cache: Rc::new(RefCell::new(Trie::new())),
-            max_lifetime: Duration::from_secs_f64(600.0),
-            max_sig_ticks: 60u8,
-            current_sig_tick: 0u8,
-            rng: Rc::new(RefCell::new(thread_rng()))
-            // rng: Rc<RefCell<ThreadRng>>,
-        }
+        Self::new(Duration::from_secs_f64(600.0), Duration::from_secs_f64(5.0))
     }
 }
 
@@ -452,7 +462,7 @@ mod tests {
     #[test]
     fn new_cachedfs() {
         let cf = CachedFs::new(Duration::from_secs(120), Duration::from_secs(5));
-        assert_eq!(cf.max_sig_ticks, 24u8);
+        assert_eq!(cf.max_sig_ticks, 24u16);
         assert!(cf.current_sig_tick < cf.max_sig_ticks);
     }
 
