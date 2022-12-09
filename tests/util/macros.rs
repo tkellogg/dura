@@ -1,4 +1,3 @@
-
 /// Create a Git repo with a single file and commit
 #[macro_export]
 macro_rules! repo_and_file {
@@ -25,7 +24,7 @@ macro_rules! repo_and_file {
 #[macro_export]
 macro_rules! set_log_lvl {
     ($lvl:expr) => {{
-        use tracing_subscriber::{filter, fmt, reload, prelude::*};
+        use tracing_subscriber::{filter, fmt, prelude::*, reload};
 
         let (filter, _reload_handle) = reload::Layer::new($lvl);
         tracing_subscriber::registry()

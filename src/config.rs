@@ -1,10 +1,10 @@
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fs::{create_dir_all, File};
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::{env, fs};
-use std::cell::RefCell;
 
 use serde::{Deserialize, Serialize};
 
@@ -47,7 +47,7 @@ pub struct Config {
     pub repos: BTreeMap<String, Rc<WatchConfig>>,
 
     #[serde(skip_serializing, skip_deserializing)]
-    cache: Rc<RefCell<CachedFs>>,
+    pub cache: Rc<RefCell<CachedFs>>,
 }
 
 impl Config {
