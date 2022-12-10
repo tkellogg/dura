@@ -29,11 +29,41 @@ mod cached_fs_test {
         repo_and_file!(tmp, &["repo1"], "foo.txt");
         repo_and_file!(tmp, &["repo2"], "foo.txt");
         let fs = CachedFs::new(Duration::from_millis(50), Duration::from_millis(5));
-        let found = iter_to_set(fs.list_dir(tmp.path().to_path_buf()));
-        assert_eq!(found.len(), 2);
         assert_eq!(
-            found,
+            iter_to_set(fs.list_dir(tmp.path().to_path_buf())),
             HashSet::from(["repo1".to_string(), "repo2".to_string()])
+        );
+        // same, but again
+        assert_eq!(
+            iter_to_set(fs.list_dir(tmp.path().to_path_buf())),
+            HashSet::from(["repo1".to_string(), "repo2".to_string()])
+        );
+    }
+
+    #[test]
+    fn finds_nested_dirs() {
+        // set_log_lvl!(filter::LevelFilter::TRACE);
+        let tmp = tempfile::tempdir().unwrap();
+        repo_and_file!(tmp, &["foo", "repo1"], "foo.txt");
+        repo_and_file!(tmp, &["foo", "bar", "repo2"], "foo.txt");
+        let fs = CachedFs::new(Duration::from_millis(50), Duration::from_millis(5));
+        assert_eq!(
+            iter_to_set(fs.list_dir(tmp.path().join("foo"))),
+            HashSet::from(["repo1".to_string(), "bar".to_string()])
+        );
+        assert_eq!(
+            // again
+            iter_to_set(fs.list_dir(tmp.path().join("foo"))),
+            HashSet::from(["repo1".to_string(), "bar".to_string()])
+        );
+        assert_eq!(
+            iter_to_set(fs.list_dir(tmp.path().join("foo").join("bar"))),
+            HashSet::from(["repo2".to_string()])
+        );
+        assert_eq!(
+            // again
+            iter_to_set(fs.list_dir(tmp.path().join("foo").join("bar"))),
+            HashSet::from(["repo2".to_string()])
         );
     }
 
@@ -79,6 +109,7 @@ mod cached_fs_test {
     }
 
     #[test]
+    #[ignore]
     fn finds_new_dirs_within_max_duration() {
         set_log_lvl!(filter::LevelFilter::TRACE);
         let (loop_break, found, _tmp) = do_test();

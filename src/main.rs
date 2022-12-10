@@ -134,7 +134,7 @@ async fn main() {
         }
         Some(("serve", arg_matches)) => {
             let env_filter =
-                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug"));
 
             match arg_matches.get_one::<String>("logfile") {
                 Some(logfile) => {

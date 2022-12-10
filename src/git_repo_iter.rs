@@ -169,7 +169,7 @@ pub struct CacheItem {
     sig_invalidate: u16,
     /// Force invalidate at this point
     ttl: Instant,
-    children: Rc<RefCell<Vec<String>>>,
+    children: Option<Rc<RefCell<Vec<String>>>>,
 }
 
 /// A repository of directory iterators that caches to avoid hitting the disk. Cache
@@ -272,20 +272,10 @@ strange behavior may occur"
             cache.get::<PPath>(&ppath).cloned()
         };
 
-        fn get_remember_path(item: &CacheItem) -> RememberPath {
-            // copy what can live longer
-            let children = Rc::clone(&item.children);
-            Rc::new(move |segment| {
-                // borrow or a very short period
-                (*children).borrow_mut().push(segment);
-            })
-        }
-
         match cache_item {
             _ if self.disable => {
                 debug!("Cache disabled; path={}", ppath.to_string());
-                let created = self.get_new_cache_item()();
-                self.send_miss(&ppath, get_remember_path(&created))
+                self.send_miss(&ppath)
             }
             Some(found) if found.sig_invalidate == self.current_sig_tick => {
                 debug!(
@@ -293,19 +283,19 @@ strange behavior may occur"
                     found.sig_invalidate,
                     ppath.to_string()
                 );
-                self.send_miss(&ppath, get_remember_path(&found))
+                self.send_miss(&ppath)
             }
-            // Some(found) if found.children == None => {
-            //     debug!("Cache miss, uninitialized; path={}", ppath.to_string());
-            //     self.send_miss(&ppath, get_remember_path(&found))
-            // }
+            Some(found) if found.children.is_none() => {
+                debug!("Cache miss, uninitialized; path={}", ppath.to_string());
+                self.send_miss(&ppath)
+            }
             Some(found) if found.ttl < Instant::now() => {
                 debug!(
                     "Cache miss, timeout; ttl_delta={}, secs, path={}",
                     (Instant::now() - found.ttl).as_secs_f32(),
                     ppath.to_string()
                 );
-                self.send_miss(&ppath, get_remember_path(&found))
+                self.send_miss(&ppath)
             }
             Some(found) => {
                 trace!(
@@ -319,8 +309,7 @@ strange behavior may occur"
             }
             None => {
                 debug!("Cache miss, not present; path={}", ppath.to_string());
-                let created = self.get_new_cache_item()();
-                self.send_miss(&ppath, get_remember_path(&created))
+                self.send_miss(&ppath)
             }
         }
     }
@@ -330,9 +319,9 @@ strange behavior may occur"
         let cache = (*self.cache).borrow();
         let complex = cache
             .get::<PPath>(ppath)
-            .map(|item| item.children.as_ref())
+            .and_then(|item| item.children.as_ref())
             .unwrap_or(&empty);
-        let children = (*complex)
+        let children = (**complex)
             .borrow()
             .iter()
             .map(|str| Rc::new(ppath.path().join(str)))
@@ -355,12 +344,12 @@ strange behavior may occur"
         let new_cache_item: NewCacheItem = Rc::new(move || CacheItem {
             sig_invalidate: (*copied_rng).borrow_mut().gen_range(0u16..max_sig_ticks),
             ttl,
-            children: Rc::new(RefCell::new(vec![])),
+            children: None,
         });
         new_cache_item
     }
 
-    fn send_miss(&self, ppath: &PPath, remember_path: RememberPath) -> CachedDirIter {
+    fn send_miss(&self, ppath: &PPath) -> CachedDirIter {
         let new_cache_item = self.get_new_cache_item();
 
         // read dir
@@ -373,12 +362,7 @@ strange behavior may occur"
                     path = ppath.to_string()
                 );
 
-                CachedDirIter::Miss(
-                    iter,
-                    Rc::clone(&self.cache),
-                    Rc::clone(&new_cache_item),
-                    remember_path,
-                )
+                CachedDirIter::Miss(iter, Rc::clone(&self.cache), Rc::clone(&new_cache_item))
             }
             Err(err) => {
                 warn!(
@@ -438,8 +422,6 @@ impl Borrow<[u8]> for PPath {
 
 type NewCacheItem = Rc<dyn Fn() -> CacheItem>;
 
-type RememberPath = Rc<dyn Fn(String)>;
-
 /// Union over 2 types of iterators over directories. Either the
 /// cache hit or cache miss mode.
 pub enum CachedDirIter {
@@ -447,7 +429,6 @@ pub enum CachedDirIter {
         fs::ReadDir,
         Rc<RefCell<Trie<PPath, CacheItem>>>,
         NewCacheItem,
-        RememberPath,
     ),
     Hit {
         index: usize,
@@ -460,39 +441,57 @@ impl Iterator for CachedDirIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            CachedDirIter::Miss(iter, cache_cell, new_cache_item, remember_path) => {
+            CachedDirIter::Miss(iter, cache_cell, new_cache_item) => {
                 iter.next().and_then(|e| {
-                    e.ok().map(|d| {
-                        let path = Rc::new(d.path());
+                    e.ok().map(|dir_entry| {
+                        let entry_path = Rc::new(dir_entry.path());
                         let res = (**cache_cell)
                             .borrow_mut()
-                            .insert(PPath::new(&path), new_cache_item());
+                            .insert(PPath::new(&entry_path), new_cache_item());
 
                         match res {
                             Some(_) => {
-                                debug!(
+                                trace!(
                                     "Updated cache for directory; path={path}",
-                                    path = (*path).display()
+                                    path = (*entry_path).display()
                                 );
                             }
                             None => {
-                                debug!(
+                                trace!(
                                     "Created item in cache for directory; path={path}",
-                                    path = (*path).display()
+                                    path = (*entry_path).display()
                                 );
                             }
                         }
 
-                        // maintain a vec of dir names in self
-                        let comp = (*path)
-                            .components()
-                            .last()
-                            .and_then(|last| last.as_os_str().to_os_string().into_string().ok());
-                        if let Some(segment) = comp {
-                            remember_path(segment);
+                        // insert this item into parent node
+                        if let Some(parent) = entry_path.parent() {
+                            let search_node = PPath::new(parent);
+                            if let Some(found_item) =
+                                (**cache_cell).borrow_mut().get_mut::<PPath>(&search_node)
+                            {
+                                // maintain a vec of dir names in self
+                                let comp = (*entry_path).components().last().and_then(|last| {
+                                    last.as_os_str().to_os_string().into_string().ok()
+                                });
+                                match &found_item.children {
+                                    Some(c) => {
+                                        if let Some(last_component) = comp {
+                                            (*c).borrow_mut().push(last_component);
+                                        }
+                                    }
+                                    None => {
+                                        let mut vec = vec![];
+                                        if let Some(last_component) = comp {
+                                            vec.push(last_component);
+                                        }
+                                        found_item.children = Some(Rc::new(RefCell::new(vec)));
+                                    }
+                                };
+                            }
                         }
 
-                        path
+                        entry_path
                     })
                 })
             }
