@@ -12,7 +12,7 @@ documentation = "https://github.com/tkellogg/dura/blob/master/README.md"
 [dependencies]
 anyhow = "1.0.66"
 clap = { version = "4.0", features = ["cargo", "string"] }
-git2 = "0.15"
+git2 = "0.16"
 hdrhistogram = "7.5.2"
 dirs = "4.0.0"
 tokio = { version = "1", features = ["full"] }
