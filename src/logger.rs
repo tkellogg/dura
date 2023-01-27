@@ -96,7 +96,7 @@ impl Visit for JsonVisitor {
     }
 
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
-        let s = format!("{:?}", value);
+        let s = format!("{value:?}");
         match serde_json::from_str::<serde_json::Value>(&s) {
             Ok(value) => {
                 self.0.insert(field.name(), value);

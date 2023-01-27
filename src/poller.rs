@@ -28,7 +28,7 @@ fn process_directory(current_path: &Path, guard: &mut PollGuard) {
             Ok(Some(status)) => op = Some(status),
             Ok(None) => (),
             Err(err) => {
-                error = Some(format!("{}", err));
+                error = Some(format!("{err}"));
             }
         }
     } else {

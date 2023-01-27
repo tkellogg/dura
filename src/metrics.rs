@@ -28,11 +28,11 @@ pub fn get_snapshot_metrics(
         match scrape_log(input_line) {
             Ok(Some(mut output)) => {
                 scrape_git(&mut output, &mut repo_cache)?;
-                writeln!(&mut writer, "{}", output)?;
+                writeln!(&mut writer, "{output}")?;
             }
             Ok(None) => {}
             // Seems like a good way to report errors, idk...
-            Err(e) => eprintln!("line {}: {}", line, e),
+            Err(e) => eprintln!("line {line}: {e}"),
         }
     }
 }
