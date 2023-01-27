@@ -60,7 +60,7 @@ impl Daemon {
                         }
                     }
                     Err(e) => {
-                        eprintln!("Error in daemon: {:?}", e);
+                        eprintln!("Error in daemon: {e:?}");
                         sender.send(None).unwrap();
                         break;
                     }

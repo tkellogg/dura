@@ -113,7 +113,7 @@ impl Dura {
     pub fn get_config(&self) -> Option<Config> {
         println!("$ cat ~/.config/dura/config.toml");
         let cfg = Config::load_file(self.config_path().as_path()).ok();
-        println!("{:?}", cfg);
+        println!("{cfg:?}");
         cfg
     }
 
