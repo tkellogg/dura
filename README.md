@@ -156,3 +156,5 @@ runs less frequently than every 5 seconds (potentially a lot less frequently, if
 [build action]: https://github.com/tkellogg/dura/actions/workflows/build.yaml
 [nix website]: https://nixos.org/
 [nix flake]: https://nixos.wiki/wiki/Flakes
+
+Brought to you by <a rel="me" href="https://hachyderm.io/@kellogh">Tim Kellogg</a>.
