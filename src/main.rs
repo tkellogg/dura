@@ -152,9 +152,7 @@ async fn main() {
                             match result_open_file {
                                 Ok(f) => f,
                                 Err(e) => {
-                                    eprintln!(
-                                        "Unable to open file {file} for logging due to {e}"
-                                    );
+                                    eprintln!("Unable to open file {file} for logging due to {e}");
                                     std::process::exit(1);
                                 }
                             }
