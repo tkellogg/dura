@@ -36,11 +36,11 @@ impl GitRepo {
         if let Ok(output) = child_proc {
             let text = String::from_utf8(output.stdout).unwrap();
             if !text.is_empty() {
-                println!("{}", text);
+                println!("{text}");
             }
             let err = String::from_utf8(output.stderr).unwrap();
             if !err.is_empty() {
-                println!("{}", err);
+                println!("{err}");
             }
             if !output.status.success() {
                 // This cleans up test development by causing us to fail earlier
@@ -77,7 +77,7 @@ impl GitRepo {
     pub fn write_file(&self, path: &str) {
         let content = "initial rev";
         let path_obj = self.dir.as_path().join(path);
-        println!("$ echo '{}' > {}", content, path);
+        println!("$ echo '{content}' > {path}");
         fs::write(path_obj, content).unwrap();
     }
 
@@ -85,7 +85,7 @@ impl GitRepo {
     pub fn change_file(&mut self, path: &str) {
         self.counter += 1;
         let content = format!("change {}", self.counter);
-        println!("$ echo '{}' > {}", content, path);
+        println!("$ echo '{content}' > {path}");
         let path_obj = self.dir.as_path().join(path);
         fs::write(path_obj, content).unwrap();
     }

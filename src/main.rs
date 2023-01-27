@@ -128,11 +128,11 @@ async fn main() {
             match snapshots::capture(dir) {
                 Ok(oid_opt) => {
                     if let Some(oid) = oid_opt {
-                        println!("{}", oid);
+                        println!("{oid}");
                     }
                 }
                 Err(e) => {
-                    println!("Dura capture failed: {}", e);
+                    println!("Dura capture failed: {e}");
                     process::exit(1);
                 }
             }
@@ -153,8 +153,7 @@ async fn main() {
                                 Ok(f) => f,
                                 Err(e) => {
                                     eprintln!(
-                                        "Unable to open file {} for logging due to {}",
-                                        file, e
+                                        "Unable to open file {file} for logging due to {e}"
                                     );
                                     std::process::exit(1);
                                 }

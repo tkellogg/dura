@@ -63,11 +63,11 @@ impl Dura {
             }
             let text = String::from_utf8(output.stdout).unwrap();
             if !text.is_empty() {
-                println!("{}", text);
+                println!("{text}");
             }
             let err = String::from_utf8(output.stderr).unwrap();
             if !err.is_empty() {
-                println!("{}", err);
+                println!("{err}");
             }
         }
     }
@@ -89,11 +89,11 @@ impl Dura {
             }
             let text = String::from_utf8(output.stdout).unwrap();
             if !text.is_empty() {
-                println!("{}", text);
+                println!("{text}");
             }
             let err = String::from_utf8(output.stderr).unwrap();
             if !err.is_empty() {
-                println!("{}", err);
+                println!("{err}");
             }
         }
     }

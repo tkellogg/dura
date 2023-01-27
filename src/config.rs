@@ -119,14 +119,14 @@ impl Config {
         let config_string = match toml::to_string(self) {
             Ok(v) => v,
             Err(e) => {
-                println!("Unexpected error when deserializing config: {}", e);
+                println!("Unexpected error when deserializing config: {e}");
                 return;
             }
         };
 
         match fs::write(path, config_string) {
             Ok(_) => (),
-            Err(e) => println!("Unable to initialize dura config file: {}", e),
+            Err(e) => println!("Unable to initialize dura config file: {e}"),
         }
     }
 
@@ -137,10 +137,10 @@ impl Config {
             .expect("The provided path is not valid unicode");
 
         if self.repos.contains_key(abs_path) {
-            println!("{} is already being watched", abs_path)
+            println!("{abs_path} is already being watched")
         } else {
             self.repos.insert(abs_path.to_string(), Rc::new(cfg));
-            println!("Started watching {}", abs_path)
+            println!("Started watching {abs_path}")
         }
     }
 
@@ -153,9 +153,9 @@ impl Config {
 
         match self.repos.remove(&abs_path) {
             Some(_) => {
-                println!("Stopped watching {}", abs_path);
+                println!("Stopped watching {abs_path}");
             }
-            None => println!("{} is not being watched", abs_path),
+            None => println!("{abs_path} is not being watched"),
         }
     }
 
