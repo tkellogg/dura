@@ -95,7 +95,7 @@ async fn main() {
             Command::new("unwatch")
                 .short_flag('U')
                 .long_flag("unwatch")
-                .about("Missing description")
+                .about("Remove the current working directory as a repository to watch.")
                 .arg(arg_directory)
         )
         .subcommand(
