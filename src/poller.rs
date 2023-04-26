@@ -65,7 +65,7 @@ fn do_task(stats: &mut StatCollector, guard: &mut PollGuard) {
         process::exit(1);
     }
 
-    let config = Config::load();
+    let mut config = Config::load();
 
     let loop_start = Instant::now();
     for repo in config.git_repos() {

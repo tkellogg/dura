@@ -11,6 +11,7 @@ documentation = "https://github.com/tkellogg/dura/blob/master/README.md"
 
 [dependencies]
 anyhow = "1.0.66"
+qp-trie = "0.8.0"
 clap = { version = "4.0", features = ["cargo", "string"] }
 git2 = "0.15"
 hdrhistogram = "7.5.2"
@@ -18,7 +19,10 @@ dirs = "4.0.0"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
+num-traits = "0.2.15"
+os_str_bytes = "6.4.1"
 chrono = "0.4"
+rand = "0.8.5"
 toml = "0.5.8"
 tracing = { version = "0.1.5"}
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
