@@ -98,6 +98,17 @@ impl Dura {
         }
     }
 
+    pub fn run_output(&self, args: &[&str]) -> std::process::Output {
+        println!("$ dura {}", args.join(" "));
+        let exe = env!("CARGO_BIN_EXE_dura").to_string();
+        Command::new(exe)
+            .args(args)
+            .env("DURA_CONFIG_HOME", self.config_dir.path())
+            .env("DURA_CACHE_HOME", self.cache_dir.path())
+            .output()
+            .expect("Failed to execute dura")
+    }
+
     pub fn pid(&self, is_primary: bool) -> Option<u32> {
         if is_primary {
             self.primary.as_ref().map(|d| d.child.id())

@@ -15,6 +15,14 @@ impl RuntimeLock {
         Self { pid: None }
     }
 
+    /// Check if the stored PID corresponds to a running process.
+    pub fn is_alive(&self) -> bool {
+        match self.pid {
+            None => false,
+            Some(pid) => is_process_alive(pid),
+        }
+    }
+
     pub fn default_path() -> PathBuf {
         Self::get_dura_cache_home().join("runtime.db")
     }
@@ -78,4 +86,11 @@ impl RuntimeLock {
         let json = serde_json::to_string(self).unwrap();
         fs::write(path, json).unwrap()
     }
+}
+
+fn is_process_alive(pid: u32) -> bool {
+    let pid = sysinfo::Pid::from_u32(pid);
+    let mut sys = sysinfo::System::new();
+    sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[pid]), true);
+    sys.process(pid).is_some()
 }
