@@ -5,7 +5,8 @@ use std::process;
 
 use clap::builder::IntoResettable;
 use clap::{
-    arg, crate_authors, crate_description, crate_name, crate_version, value_parser, Arg, Command,
+    arg, crate_authors, crate_description, crate_name, crate_version, value_parser, Arg, ArgAction,
+    Command,
 };
 use dura::config::{Config, WatchConfig};
 use dura::database::RuntimeLock;
@@ -103,6 +104,17 @@ async fn main() {
                 .short_flag('K')
                 .long_flag("kill")
                 .about("Stop the running worker (should only be a single worker).")
+        )
+        .subcommand(
+            Command::new("status")
+                .long_flag("status")
+                .about("Show whether the dura daemon is running and list watched repositories.")
+                .arg(
+                    Arg::new("json")
+                        .long("json")
+                        .help("Output in JSON format")
+                        .action(ArgAction::SetTrue)
+                )
         )
         .subcommand(
             Command::new("metrics")
@@ -204,6 +216,10 @@ async fn main() {
         Some(("kill", _)) => {
             kill();
         }
+        Some(("status", arg_matches)) => {
+            let json = arg_matches.get_flag("json");
+            status(json);
+        }
         Some(("metrics", arg_matches)) => {
             let mut input: Box<dyn Read> = match arg_matches.get_one::<String>("input") {
                 Some(input) => Box::new(
@@ -268,4 +284,64 @@ fn kill() {
     let mut runtime_lock = RuntimeLock::load();
     runtime_lock.pid = None;
     runtime_lock.save();
+}
+
+fn status(json: bool) {
+    let runtime_lock = RuntimeLock::load();
+    let is_running = runtime_lock.is_alive();
+    let config = Config::load();
+    let config_path = Config::default_path();
+    let cache_path = RuntimeLock::default_path()
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| RuntimeLock::default_path());
+
+    if json {
+        let repos: Vec<serde_json::Value> = config
+            .repos
+            .iter()
+            .map(|(path, _)| {
+                serde_json::json!({
+                    "path": path,
+                })
+            })
+            .collect();
+
+        let output = serde_json::json!({
+            "daemon": {
+                "running": is_running,
+                "pid": if is_running { runtime_lock.pid } else { None },
+            },
+            "repositories": repos,
+            "config_path": config_path.to_string_lossy(),
+            "cache_path": cache_path.to_string_lossy(),
+        });
+
+        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+    } else {
+        if is_running {
+            eprintln!("dura serve is running (PID {})", runtime_lock.pid.unwrap());
+        } else {
+            eprintln!("dura serve is not running");
+        }
+
+        eprintln!();
+        eprintln!("Config: {}", config_path.display());
+        eprintln!("Cache:  {}", cache_path.display());
+
+        if !config.repos.is_empty() {
+            eprintln!();
+            eprintln!("Watching {} repositories:", config.repos.len());
+            for (path, _) in &config.repos {
+                eprintln!("  {path}");
+            }
+        } else if is_running {
+            eprintln!();
+            eprintln!("No repositories are being watched. Run `dura watch` in a git repository.");
+        }
+    }
+
+    if !is_running {
+        process::exit(1);
+    }
 }
