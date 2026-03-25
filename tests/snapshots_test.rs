@@ -146,3 +146,62 @@ fn test_commit_signature_exclude_git_config() {
         .unwrap();
     assert_eq!(commit_email, "dura@github.io");
 }
+
+/// Repos with no commits (unborn branch) should be captured without error
+#[test]
+fn unborn_branch_first_capture() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
+    repo.init();
+    // Don't commit — this is the unborn branch case
+    repo.write_file("foo.txt");
+
+    let status = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
+
+    assert_eq!(status.dura_branch, "dura/unborn");
+    assert_eq!(status.base_hash, "unborn");
+}
+
+/// Subsequent captures on an unborn branch reuse the prior dura commit as parent
+#[test]
+fn unborn_branch_subsequent_capture() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
+    repo.init();
+    repo.write_file("foo.txt");
+
+    // First capture
+    let status1 = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
+    assert_eq!(status1.dura_branch, "dura/unborn");
+
+    // Change the file and capture again
+    repo.change_file("foo.txt");
+    let status2 = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
+
+    assert_eq!(status2.dura_branch, "dura/unborn");
+    assert_ne!(status2.commit_hash, status1.commit_hash);
+}
+
+/// After user makes their first commit, dura switches from unborn to normal branch
+#[test]
+fn unborn_branch_transitions_to_normal() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = util::git_repo::GitRepo::new(tmp.path().to_path_buf());
+    repo.init();
+    repo.write_file("foo.txt");
+
+    // Capture on unborn
+    let status1 = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
+    assert_eq!(status1.dura_branch, "dura/unborn");
+
+    // User makes their first commit
+    repo.commit_all();
+    // Change a file
+    repo.change_file("foo.txt");
+
+    // Now dura should use the normal branch naming
+    let status2 = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
+    assert!(status2.dura_branch.starts_with("dura/"));
+    assert_ne!(status2.dura_branch, "dura/unborn");
+    assert_ne!(status2.base_hash, "unborn");
+}
