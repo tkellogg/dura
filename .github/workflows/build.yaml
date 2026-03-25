@@ -19,39 +19,26 @@ jobs:
 
     steps:
       - name: Check out source files
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
       - name: Update Toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          components: clippy
+          components: clippy, rustfmt
 
       - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --all-features
+        run: cargo build --release --all-features
 
       - name: Rustfmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --check
+        run: cargo fmt --check
 
       - name: Cargo Clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Cargo Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --profile release
+        run: cargo test --profile release
 
       - name: Basic Testing
         continue-on-error: true
@@ -70,7 +57,7 @@ jobs:
           ${{ github.workspace }}\target\release\dura.exe kill
 
       - name: Upload Binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dura-${{ matrix.binary-suffix }}_${{ github.sha }}
           path: ${{ github.workspace }}/target/release/dura
