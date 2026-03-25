@@ -99,7 +99,7 @@ fn scrape_git(
             .and_then(|c| c.as_str())
             .and_then(|c| Oid::from_str(c).ok())
             .and_then(|c| repo.find_commit(c).ok());
-        let parent_commit = commit_opt.as_ref().and_then(|c| c.parents().last());
+        let parent_commit = commit_opt.as_ref().and_then(|c| c.parents().next_back());
         if let (Some(commit), Some(parent)) = (commit_opt, parent_commit) {
             let diff =
                 repo.diff_tree_to_tree(Some(&parent.tree()?), Some(&commit.tree()?), None)?;

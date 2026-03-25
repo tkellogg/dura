@@ -159,7 +159,7 @@ impl Config {
         }
     }
 
-    pub fn git_repos(&self) -> GitRepoIter {
+    pub fn git_repos(&self) -> GitRepoIter<'_> {
         GitRepoIter::new(self)
     }
 }

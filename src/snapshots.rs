@@ -52,7 +52,7 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
                     // For normal repos: if the branch commit equals head, dura hasn't
                     // made any backup yet — clean up and start fresh.
                     // For unborn repos: any existing commit is a valid prior backup.
-                    let dominated_by_head = head.as_ref().map_or(false, |h| commit.id() == h.id());
+                    let dominated_by_head = head.as_ref().is_some_and(|h| commit.id() == h.id());
                     if dominated_by_head {
                         branch.delete()?;
                         None

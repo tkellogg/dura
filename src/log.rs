@@ -43,6 +43,7 @@ impl Operation {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct Stats {
     dir_stats: Histo,
     loop_stats: Histo,
