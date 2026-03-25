@@ -87,7 +87,7 @@ async fn main() {
                     .required(false)
                     .action(clap::builder::ArgAction::Set)
                     .value_parser(value_parser!(String))
-                    .default_value(&"255".to_string())
+                    .default_value("255".to_string())
                     .num_args(0..=1)
                     .help("Determines the depth to recurse into when scanning directories")
                 )
@@ -264,7 +264,7 @@ fn unwatch_dir(path: &std::path::Path) {
     config.save();
 }
 
-#[cfg(all(unix))]
+#[cfg(unix)]
 fn check_if_user() -> bool {
     sudo::check() != sudo::RunningAs::Root
 }
@@ -294,13 +294,13 @@ fn status(json: bool) {
     let cache_path = RuntimeLock::default_path()
         .parent()
         .map(|p| p.to_path_buf())
-        .unwrap_or_else(|| RuntimeLock::default_path());
+        .unwrap_or_else(RuntimeLock::default_path);
 
     if json {
         let repos: Vec<serde_json::Value> = config
             .repos
-            .iter()
-            .map(|(path, _)| {
+            .keys()
+            .map(|path| {
                 serde_json::json!({
                     "path": path,
                 })
@@ -332,7 +332,7 @@ fn status(json: bool) {
         if !config.repos.is_empty() {
             eprintln!();
             eprintln!("Watching {} repositories:", config.repos.len());
-            for (path, _) in &config.repos {
+            for path in config.repos.keys() {
                 eprintln!("  {path}");
             }
         } else if is_running {
