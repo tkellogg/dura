@@ -1,4 +1,4 @@
-use git2::{BranchType, DiffOptions, Error, IndexAddOption, Repository, Signature};
+use git2::{BranchType, DiffOptions, Error, ErrorCode, IndexAddOption, Repository, Signature};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::Path;
@@ -28,7 +28,11 @@ pub fn is_repo(path: &Path) -> bool {
 
 pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
     let repo = Repository::open(path)?;
-    let head = repo.head()?.peel_to_commit()?;
+    let head = match repo.head() {
+        Ok(reference) => Some(reference.peel_to_commit()?),
+        Err(e) if e.code() == ErrorCode::UnbornBranch => None,
+        Err(e) => return Err(e),
+    };
     let message = "dura auto-backup";
 
     // status check
@@ -36,14 +40,29 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
         return Ok(None);
     }
 
-    let branch_name = format!("dura/{}", head.id());
+    let branch_name = match &head {
+        Some(commit) => format!("dura/{}", commit.id()),
+        None => "dura/unborn".to_string(),
+    };
+
     let branch_commit = match repo.find_branch(&branch_name, BranchType::Local) {
         Ok(mut branch) => {
             match branch.get().peel_to_commit() {
-                Ok(commit) if commit.id() != head.id() => Some(commit),
+                Ok(commit) => {
+                    // For normal repos: if the branch commit equals head, dura hasn't
+                    // made any backup yet — clean up and start fresh.
+                    // For unborn repos: any existing commit is a valid prior backup.
+                    let dominated_by_head =
+                        head.as_ref().map_or(false, |h| commit.id() == h.id());
+                    if dominated_by_head {
+                        branch.delete()?;
+                        None
+                    } else {
+                        Some(commit)
+                    }
+                }
                 _ => {
-                    // Dura branch exist but no commit is made by dura
-                    // So we clean this branch
+                    // Dura branch exists but can't resolve to commit — clean up
                     branch.delete()?;
                     None
                 }
@@ -51,14 +70,21 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
         }
         Err(_) => None,
     };
-    let parent_commit = branch_commit.as_ref().unwrap_or(&head);
+
+    // Parent is either an existing dura branch commit or the head commit.
+    // For unborn repos with no prior dura backup, there is no parent.
+    let parent = branch_commit.as_ref().or(head.as_ref());
 
     // tree
     let mut index = repo.index()?;
     index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
 
+    let old_tree = match parent {
+        Some(commit) => Some(commit.tree()?),
+        None => None,
+    };
     let dirty_diff = repo.diff_tree_to_index(
-        Some(&parent_commit.tree()?),
+        old_tree.as_ref(),
         Some(&index),
         Some(DiffOptions::new().include_untracked(true)),
     )?;
@@ -68,24 +94,34 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
 
     let tree_oid = index.write_tree()?;
     let tree = repo.find_tree(tree_oid)?;
+
+    // Create dura branch if it doesn't exist.
+    // For unborn repos we skip this — repo.commit() with update_ref will create the ref.
     if repo.find_branch(&branch_name, BranchType::Local).is_err() {
-        repo.branch(branch_name.as_str(), &head, false)?;
+        if let Some(head_commit) = &head {
+            repo.branch(branch_name.as_str(), head_commit, false)?;
+        }
     }
 
     let committer = Signature::now(&get_git_author(&repo), &get_git_email(&repo))?;
+    let parents: Vec<&git2::Commit> = parent.into_iter().collect();
     let oid = repo.commit(
         Some(&format!("refs/heads/{}", &branch_name)),
         &committer,
         &committer,
         message,
         &tree,
-        &[parent_commit],
+        &parents,
     )?;
+
+    let base_hash = head
+        .as_ref()
+        .map_or("unborn".to_string(), |h| h.id().to_string());
 
     Ok(Some(CaptureStatus {
         dura_branch: branch_name,
         commit_hash: oid.to_string(),
-        base_hash: head.id().to_string(),
+        base_hash,
     }))
 }
 
