@@ -1,4 +1,6 @@
-use git2::{BranchType, Diff, DiffOptions, Error, ErrorCode, IndexAddOption, Repository, Signature};
+use git2::{
+    BranchType, Diff, DiffOptions, Error, ErrorCode, IndexAddOption, Repository, Signature,
+};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::Path;
