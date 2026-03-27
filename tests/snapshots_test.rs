@@ -147,6 +147,41 @@ fn test_commit_signature_exclude_git_config() {
     assert_eq!(commit_email, "dura@github.io");
 }
 
+/// Commit messages should include file names and change stats
+#[test]
+fn commit_message_includes_file_info() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = repo_and_file!(tmp, "model.py");
+    repo.change_file("model.py");
+    let status = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
+
+    let message = repo
+        .git(&["show", "-s", "--format=format:%s", &status.commit_hash])
+        .unwrap();
+    assert!(message.starts_with("dura: 1 file"), "got: {}", message);
+    assert!(message.contains("model.py"), "got: {}", message);
+}
+
+/// Commit messages with multiple files show stats and file names
+#[test]
+fn commit_message_multiple_files() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut repo = repo_and_file!(tmp, "foo.txt");
+    repo.write_file("bar.txt");
+    repo.commit_all();
+
+    repo.change_file("foo.txt");
+    repo.change_file("bar.txt");
+    let status = snapshots::capture(repo.dir.as_path()).unwrap().unwrap();
+
+    let message = repo
+        .git(&["show", "-s", "--format=format:%s", &status.commit_hash])
+        .unwrap();
+    assert!(message.starts_with("dura: 2 files"), "got: {}", message);
+    assert!(message.contains("foo.txt"), "got: {}", message);
+    assert!(message.contains("bar.txt"), "got: {}", message);
+}
+
 /// Repos with no commits (unborn branch) should be captured without error
 #[test]
 fn unborn_branch_first_capture() {

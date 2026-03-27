@@ -1,4 +1,4 @@
-use git2::{BranchType, DiffOptions, Error, ErrorCode, IndexAddOption, Repository, Signature};
+use git2::{BranchType, Diff, DiffOptions, Error, ErrorCode, IndexAddOption, Repository, Signature};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::Path;
@@ -33,8 +33,6 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
         Err(e) if e.code() == ErrorCode::UnbornBranch => None,
         Err(e) => return Err(e),
     };
-    let message = "dura auto-backup";
-
     // status check
     if repo.statuses(None)?.is_empty() {
         return Ok(None);
@@ -91,6 +89,9 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
         return Ok(None);
     }
 
+    // Build informative commit message with file names and change stats
+    let message = build_commit_message(&dirty_diff);
+
     let tree_oid = index.write_tree()?;
     let tree = repo.find_tree(tree_oid)?;
 
@@ -108,7 +109,7 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
         Some(&format!("refs/heads/{}", &branch_name)),
         &committer,
         &committer,
-        message,
+        &message,
         &tree,
         &parents,
     )?;
@@ -122,6 +123,61 @@ pub fn capture(path: &Path) -> Result<Option<CaptureStatus>, Error> {
         commit_hash: oid.to_string(),
         base_hash,
     }))
+}
+
+/// Build an informative commit message from diff stats.
+///
+/// Format: `dura: 3 files (+45/-12) model.py, config.rs, utils.rs`
+///
+/// The first line stays under 72 chars for git log readability.
+/// File names are base names only (no directories) to save space.
+fn build_commit_message(diff: &Diff) -> String {
+    let stats = match diff.stats() {
+        Ok(s) => s,
+        Err(_) => return "dura auto-backup".to_string(),
+    };
+
+    let files_changed = stats.files_changed();
+    let insertions = stats.insertions();
+    let deletions = stats.deletions();
+
+    // Collect base file names from deltas
+    let file_names: Vec<String> = diff
+        .deltas()
+        .filter_map(|delta| {
+            delta
+                .new_file()
+                .path()
+                .and_then(|p| p.file_name())
+                .map(|n| n.to_string_lossy().into_owned())
+        })
+        .collect();
+
+    // Build first line: "dura: 3 files (+45/-12) model.py, config.rs"
+    let header = format!(
+        "dura: {} file{} (+{}/-{})",
+        files_changed,
+        if files_changed == 1 { "" } else { "s" },
+        insertions,
+        deletions
+    );
+
+    if file_names.is_empty() {
+        return header;
+    }
+
+    // Append file names, truncating to keep first line under 72 chars
+    let mut first_line = format!("{} {}", header, file_names[0]);
+    for name in &file_names[1..] {
+        let candidate = format!("{}, {}", first_line, name);
+        if candidate.len() > 72 {
+            first_line = format!("{}...", first_line);
+            break;
+        }
+        first_line = candidate;
+    }
+
+    first_line
 }
 
 fn get_git_author(repo: &Repository) -> String {
